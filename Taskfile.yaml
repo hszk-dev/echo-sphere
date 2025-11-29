@@ -1,0 +1,164 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  AGENT_DIR: apps/agent
+
+tasks:
+  # ============================================
+  # Setup
+  # ============================================
+  setup:
+    desc: Install all dependencies
+    cmds:
+      - pnpm install
+      - task: setup:agent
+
+  setup:agent:
+    desc: Setup Python agent environment
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv venv
+      - uv pip install -e ".[dev]"
+
+  # ============================================
+  # Development
+  # ============================================
+  dev:
+    desc: Start all development services
+    deps: [docker:up]
+    cmds:
+      - pnpm run dev
+
+  dev:web:
+    desc: Start web development server only
+    cmds:
+      - pnpm --filter @echo-sphere/web dev
+
+  dev:agent:
+    desc: Start agent in development mode
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run python -m src.main
+
+  # ============================================
+  # Code Quality
+  # ============================================
+  check:
+    desc: Run all linters and type checkers
+    cmds:
+      - task: check:web
+      - task: check:agent
+
+  check:web:
+    desc: Check web app (lint + typecheck)
+    cmds:
+      - pnpm --filter @echo-sphere/web lint
+      - pnpm --filter @echo-sphere/web typecheck
+
+  check:agent:
+    desc: Check agent (ruff + mypy)
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run ruff check src tests
+      - uv run ruff format --check src tests
+      - uv run mypy src
+
+  fix:
+    desc: Auto-fix linting issues
+    cmds:
+      - task: fix:web
+      - task: fix:agent
+
+  fix:web:
+    desc: Fix web app linting issues
+    cmds:
+      - pnpm --filter @echo-sphere/web lint:fix
+
+  fix:agent:
+    desc: Fix agent linting issues
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run ruff check --fix src tests
+      - uv run ruff format src tests
+
+  # ============================================
+  # Testing
+  # ============================================
+  test:
+    desc: Run all tests
+    cmds:
+      - task: test:web
+      - task: test:agent
+
+  test:web:
+    desc: Run web tests
+    cmds:
+      - pnpm --filter @echo-sphere/web test
+
+  test:agent:
+    desc: Run agent tests
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run pytest
+
+  test:unit:
+    desc: Run unit tests only
+    cmds:
+      - pnpm --filter @echo-sphere/web test:unit
+      - task: test:agent:unit
+
+  test:agent:unit:
+    desc: Run agent unit tests
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run pytest tests/unit -v
+
+  test:coverage:
+    desc: Run tests with coverage
+    dir: "{{.AGENT_DIR}}"
+    cmds:
+      - uv run pytest --cov=src --cov-report=html --cov-report=term-missing
+
+  # ============================================
+  # Build
+  # ============================================
+  build:
+    desc: Build all packages
+    cmds:
+      - pnpm run build
+
+  build:web:
+    desc: Build web app
+    cmds:
+      - pnpm --filter @echo-sphere/web build
+
+  # ============================================
+  # Docker
+  # ============================================
+  docker:up:
+    desc: Start Docker services
+    cmds:
+      - docker compose up -d
+
+  docker:down:
+    desc: Stop Docker services
+    cmds:
+      - docker compose down
+
+  docker:logs:
+    desc: Show Docker logs
+    cmds:
+      - docker compose logs -f
+
+  # ============================================
+  # Clean
+  # ============================================
+  clean:
+    desc: Clean all build artifacts
+    cmds:
+      - pnpm run clean
+      - rm -rf node_modules
+      - rm -rf {{.AGENT_DIR}}/.venv
+      - rm -rf {{.AGENT_DIR}}/__pycache__
