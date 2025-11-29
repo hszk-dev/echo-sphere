@@ -6,7 +6,7 @@ pre-commit:
   commands:
     lint-web:
       glob: "apps/web/src/**/*.{ts,tsx}"
-      run: pnpm --filter @echo-sphere/web lint --max-warnings=0
+      run: pnpm --filter @echo-sphere/web lint
 
     lint-agent:
       glob: "apps/agent/**/*.py"

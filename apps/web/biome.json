@@ -3,5 +3,17 @@
   "extends": ["../../packages/config/biome.json"],
   "files": {
     "ignore": ["node_modules", ".next", ".turbo", "dist", "coverage"]
-  }
+  },
+  "overrides": [
+    {
+      "include": ["tailwind.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    }
+  ]
 }
