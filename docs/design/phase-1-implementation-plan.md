@@ -265,6 +265,39 @@ database_url: str = "postgresql://..."
 
 ### Epic 2: Frontend Voice Room
 
+#### Task 2.0: Design System Setup
+**Priority**: P0 | **Estimate**: 2-3 hours
+
+**Description**: Set up the frontend design system foundation including fonts, colors, and theme configuration.
+
+**Acceptance Criteria**:
+- [ ] Cabinet Grotesk font files downloaded and placed in `src/fonts/`
+- [ ] Plus Jakarta Sans and JetBrains Mono configured via Google Fonts
+- [ ] Tailwind CSS extended with custom design tokens (colors, fonts, animations)
+- [ ] globals.css updated with CSS variables and theme switching
+- [ ] layout.tsx configured with font variables and dark mode default
+- [ ] Dark mode renders correctly as default theme
+
+**Implementation Steps**:
+1. Download Cabinet Grotesk (Bold, Extrabold) from [Fontshare](https://www.fontshare.com/fonts/cabinet-grotesk)
+2. Create `apps/web/src/fonts/` directory and add `.woff2` files
+3. Update `tailwind.config.ts` with custom colors, fonts, and animations
+4. Update `globals.css` with design tokens and theme variables
+5. Update `layout.tsx` with font configuration
+
+**Files to Create**:
+- `apps/web/src/fonts/CabinetGrotesk-Bold.woff2`
+- `apps/web/src/fonts/CabinetGrotesk-Extrabold.woff2`
+
+**Files to Modify**:
+- `apps/web/tailwind.config.ts`
+- `apps/web/src/app/globals.css`
+- `apps/web/src/app/layout.tsx`
+
+**Reference**: `docs/design/frontend-design-system.md`
+
+---
+
 #### Task 2.1: LiveKit Package Installation
 **Priority**: P0 | **Estimate**: 1 hour
 
@@ -359,6 +392,12 @@ POST /api/token
 - Use `useConnectionState` for connection status (no custom implementation)
 - Include `<RoomAudioRenderer>` to enable agent audio playback
 
+**Design System Integration**:
+- Apply design tokens from `frontend-design-system.md`
+- Audio Orb uses state-driven styling (idle/listening/thinking/speaking)
+- Colors: Coral (`--color-primary-500`) for user, Cyan (`--color-secondary-500`) for AI
+- Typography: `font-display` for headings, `font-body` for text
+
 **Built-in LiveKit Components Used**:
 | Component/Hook | Purpose |
 |----------------|---------|
@@ -447,13 +486,21 @@ function TranscriptPanel() {
 #### Task 2.7: Landing Page Update
 **Priority**: P2 | **Estimate**: 1-2 hours
 
-**Description**: Update home page with room creation form.
+**Description**: Update home page with room creation form following design system specifications.
 
 **Acceptance Criteria**:
 - [ ] Form to enter room name
 - [ ] Form to enter participant name
 - [ ] Navigation to room page
-- [ ] Basic styling with Tailwind
+- [ ] Design system styling applied
+
+**Design Requirements** (from `frontend-design-system.md`):
+- Two-column layout (60/40) on desktop, single column on mobile
+- Left: CTA buttons ("New Session" with coral gradient, "Join Room")
+- Right: Audio Orb preview animation
+- Dark mode styling with design tokens
+- `font-display` (Cabinet Grotesk) for headings
+- Primary button uses `--color-primary-500` with glow effect
 
 **Files to Modify**:
 - `apps/web/src/app/page.tsx`
@@ -513,13 +560,16 @@ graph TD
     B --> G[1.7 Domain Tests]
     D --> G
 
-    H[2.1 LiveKit Packages] --> I[2.2 Token API]
+    DS[2.0 Design System] --> H[2.1 LiveKit Packages]
+    DS --> K[2.4 Voice Room Feature]
+    DS --> N[2.7 Landing Page]
+    H --> I[2.2 Token API]
     H --> J[2.3 Env Config]
-    I --> K[2.4 Voice Room Feature]
+    I --> K
     J --> K
     K --> L[2.5 Room Page]
     K --> M[2.6 Transcript Panel]
-    L --> N[2.7 Landing Page]
+    L --> N
 
     C --> O[3.1 E2E Test]
     D --> O
@@ -533,11 +583,11 @@ graph TD
 
 | Priority | Tasks | Total Estimate |
 |----------|-------|----------------|
-| P0 (Must Have) | 1.1, 1.2, 1.3, 2.1, 2.2, 2.3, 2.4, 2.5 | 20-26 hours |
+| P0 (Must Have) | 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5 | 22-29 hours |
 | P1 (Should Have) | 1.4, 1.5, 1.6, 1.7, 2.6, 3.1, 3.2 | 16-22 hours |
 | P2 (Nice to Have) | 2.7 | 1-2 hours |
 
-**Total Estimate**: 37-50 hours (1.5-2 weeks)
+**Total Estimate**: 39-53 hours (1.5-2 weeks)
 
 ---
 
@@ -557,19 +607,20 @@ graph TD
 7. Task 1.7: Domain Layer Tests
 
 ### Day 6-7: Frontend Foundation
-8. Task 2.1: LiveKit Package Installation
-9. Task 2.2: Token Generation API
-10. Task 2.3: Environment Configuration
+8. Task 2.0: Design System Setup
+9. Task 2.1: LiveKit Package Installation
+10. Task 2.2: Token Generation API
+11. Task 2.3: Environment Configuration
 
 ### Day 8-9: Voice Room UI
-11. Task 2.4: Voice Room Feature Module
-12. Task 2.5: Room Page Implementation
-13. Task 2.6: Transcript Panel
+12. Task 2.4: Voice Room Feature Module
+13. Task 2.5: Room Page Implementation
+14. Task 2.6: Transcript Panel
 
 ### Day 10: Polish & Testing
-14. Task 2.7: Landing Page Update
-15. Task 3.1: E2E Connection Test (Japanese voice)
-16. Task 3.2: Frontend Unit Tests
+15. Task 2.7: Landing Page Update
+16. Task 3.1: E2E Connection Test (Japanese voice)
+17. Task 3.2: Frontend Unit Tests
 
 ---
 

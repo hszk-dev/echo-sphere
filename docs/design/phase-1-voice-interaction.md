@@ -187,6 +187,32 @@ apps/web/src/
     └── env.ts                 # NEW: Environment config
 ```
 
+### 4.4 Design System
+
+Phase 1 frontend follows the design system defined in `docs/design/frontend-design-system.md`.
+
+**Design Concept**: "Ethereal Audio Space" — Voice-first, immersive audio experience.
+
+**Key Design Tokens**:
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--color-primary-500` | #FF6B4A (Coral) | CTA buttons, user voice indicator |
+| `--color-secondary-500` | #319795 (Cyan) | AI state, secondary elements |
+| `--bg-primary` | #0F1419 | Main background (dark mode) |
+| `--font-display` | Cabinet Grotesk | Display headings |
+| `--font-body` | Plus Jakarta Sans | Body text |
+
+**Theme Configuration**:
+- Default: Dark mode (`data-theme="dark"`)
+- Light mode: User-switchable via `data-theme="light"`
+- System preference: Respected on first visit
+
+**Central UI Element**: Audio Orb
+- Replaces video grid (voice-first, not video-first)
+- State-driven visualization: idle → listening → thinking → speaking
+- Colors shift between Coral (user) and Cyan (AI)
+
 ---
 
 ## 5. Component Design
@@ -421,6 +447,54 @@ function VoiceAssistantUI() {
   );
 }
 ```
+
+#### Design System Integration
+
+When implementing VoiceAssistantUI with the design system, use state-driven styling:
+
+```tsx
+// With design system classes (from frontend-design-system.md)
+function VoiceAssistantUI() {
+  const { state, audioTrack } = useVoiceAssistant();
+  const connectionState = useConnectionState();
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-bg-primary">
+      {/* Connection Status */}
+      <div className="absolute top-4 right-4 text-sm text-text-muted">
+        {connectionState}
+      </div>
+
+      {/* Audio Orb with state-driven styling */}
+      <div className={cn(
+        "w-64 h-64 rounded-full transition-all duration-300",
+        state === 'idle' && "bg-secondary-500/10 animate-voice-pulse",
+        state === 'listening' && "ring-4 ring-primary-500 bg-primary-500/10",
+        state === 'thinking' && "bg-gradient-to-r from-secondary-400 to-secondary-600 animate-thinking",
+        state === 'speaking' && "bg-primary-500/20 animate-voice-pulse shadow-glow-primary"
+      )}>
+        <BarVisualizer state={state} barCount={5} trackRef={audioTrack} />
+      </div>
+
+      {/* State label with display font */}
+      <p className="mt-4 text-lg font-display text-text-primary capitalize">
+        {state}
+      </p>
+
+      <VoiceAssistantControlBar controls={{ microphone: true, leave: true }} />
+    </div>
+  );
+}
+```
+
+**State-to-Style Mapping**:
+
+| State | Background | Animation | Accent |
+|-------|------------|-----------|--------|
+| `idle` | `secondary-500/10` | `animate-voice-pulse` | Cyan glow |
+| `listening` | `primary-500/10` | Ring pulse | Coral ring |
+| `thinking` | Gradient | `animate-thinking` | Shimmer |
+| `speaking` | `primary-500/20` | `animate-voice-pulse` | Coral glow |
 
 #### Token Fetching Pattern
 
