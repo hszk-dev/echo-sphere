@@ -2,6 +2,20 @@
 
 This file provides context for AI agents (Claude Code, Cursor, etc.) working on this project.
 
+## Agent Behavior
+
+### Action Mode
+Implement changes directly rather than suggesting them. If intent is unclear, proceed with the most useful action.
+
+### Parallel Execution
+Execute independent tool calls in parallel to maximize efficiency.
+
+### Grounded Responses
+Read code before making statements about it. Do not guess about files you haven't inspected.
+
+### Context Management
+Do not stop early due to token concerns. For multi-context tasks, use JSON state files and git commits to track progress.
+
 ## Quick Reference
 
 See @README.md for project overview and available commands.
@@ -21,23 +35,23 @@ task fix          # Auto-fix linting issues
 - System architecture: @docs/architecture/system-overview.md
 - Architecture decisions: @docs/adr/001-system-architecture.md
 
-## Critical Rules (DO NOT VIOLATE)
+## Critical Rules
 
 ### Language Policy
-- All code, comments, documentation, commits, and logs MUST be in English
+Write all code, comments, documentation, commits, and logs in English.
 
 ### Architecture Boundaries
-- `domain/` must have NO imports from external packages
-- Features must be self-contained with no circular dependencies
-- All external services accessed through adapters
+- Keep `domain/` layer pure Python with zero external package imports
+- Make features self-contained with no circular dependencies
+- Access all external services through adapter implementations
 
 ### Code Quality
-- Never use `any` type in TypeScript
-- Never use blocking I/O in Python (`requests`, `time.sleep`)
-- Never put business logic in adapters
-- Never hardcode configuration values
-- Never commit secrets or API keys
-- Never skip tests for domain logic
+- Use specific types in TypeScript (use `unknown` instead of `any` for truly unknown types)
+- Use async I/O in Python (`httpx` for HTTP, `aiofiles` for files, `asyncio.sleep` for delays)
+- Keep business logic in domain/application layers; adapters handle only I/O
+- Load configuration from environment variables via pydantic-settings
+- Store secrets in environment variables only (validated by CI)
+- Write tests for all domain logic before considering work complete
 
 ## File Organization
 
@@ -51,19 +65,20 @@ When creating new files:
 
 ## Before You Code
 
-1. Check if there's an existing pattern in the codebase
+1. Check existing patterns in the codebase
 2. Read the relevant ADR if one exists
 3. Ensure the Issue/RFC is clear
 4. Write or update tests alongside code
 5. Run `task check` before committing
 
-## Questions to Ask Yourself
+## Verification Questions
 
-- Is this in the right architectural layer?
-- Are there tests for this logic?
-- Will this break existing functionality?
-- Is the error handling appropriate?
-- Is this observable (logging, tracing)?
+Before completing any task, verify:
+- Correct architectural layer?
+- Tests written and passing?
+- Existing functionality preserved?
+- Error handling appropriate?
+- Observability in place (logging, tracing)?
 
 ## Individual Preferences
 
