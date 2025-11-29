@@ -347,21 +347,26 @@ POST /api/token
 **Description**: Create the voice-room feature with core components.
 
 **Acceptance Criteria**:
-- [ ] VoiceRoom component connects to LiveKit
-- [ ] Audio visualizer shows agent state
-- [ ] Connection status displayed
-- [ ] Graceful error handling
+- [ ] VoiceRoom component connects to LiveKit using `<LiveKitRoom>`
+- [ ] Audio visualizer shows agent state via `useVoiceAssistant`
+- [ ] Token fetching handled separately from room component
+- [ ] Graceful error handling and loading states
+
+**Implementation Notes**:
+- Use `<LiveKitRoom>` component (not manual `Room.connect()`) to avoid React 18 Strict Mode issues
+- Separate token fetching logic into `useToken` hook
+- Include `<RoomAudioRenderer>` to enable agent audio playback
 
 **Components to Create**:
-1. `VoiceRoom.tsx` - Main room wrapper
-2. `AudioVisualizer.tsx` - BarVisualizer wrapper
+1. `VoiceRoom.tsx` - LiveKitRoom wrapper with voice UI
+2. `AudioVisualizer.tsx` - BarVisualizer wrapper (optional extraction)
 3. `ConnectionStatus.tsx` - Connection state indicator
 
 **Files to Create**:
 - `apps/web/src/features/voice-room/components/VoiceRoom.tsx`
 - `apps/web/src/features/voice-room/components/AudioVisualizer.tsx`
 - `apps/web/src/features/voice-room/components/ConnectionStatus.tsx`
-- `apps/web/src/features/voice-room/hooks/useVoiceSession.ts`
+- `apps/web/src/features/voice-room/hooks/useToken.ts`
 - `apps/web/src/features/voice-room/types/index.ts`
 - `apps/web/src/features/voice-room/index.ts`
 

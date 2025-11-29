@@ -341,81 +341,44 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
 ### 5.4 Voice Room Component (React)
 
+> **Note**: We use the `<LiveKitRoom>` component instead of manual `useEffect` + `Room.connect()`.
+> This avoids React 18 Strict Mode issues (double effect execution) and provides
+> optimized connection management, automatic cleanup, and built-in error handling.
+
 ```tsx
 // apps/web/src/features/voice-room/components/VoiceRoom.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
 import {
-  RoomContext,
+  LiveKitRoom,
   useVoiceAssistant,
   BarVisualizer,
+  RoomAudioRenderer,
 } from '@livekit/components-react';
-import { Room } from 'livekit-client';
 import '@livekit/components-styles';
 
 interface VoiceRoomProps {
-  roomName: string;
-  participantName: string;
+  token: string;
+  onDisconnected?: () => void;
 }
 
-export function VoiceRoom({ roomName, participantName }: VoiceRoomProps) {
-  const [room] = useState(() => new Room({
-    adaptiveStream: true,
-    dynacast: true,
-  }));
-  const [isConnected, setIsConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function connect() {
-      try {
-        const response = await fetch('/api/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomName, participantName }),
-        });
-
-        const data = await response.json();
-
-        if (!mounted) return;
-
-        if (data.error) {
-          setError(data.error);
-          return;
-        }
-
-        await room.connect(process.env.NEXT_PUBLIC_LIVEKIT_URL!, data.token);
-        setIsConnected(true);
-      } catch (err) {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : 'Connection failed');
-        }
-      }
-    }
-
-    connect();
-
-    return () => {
-      mounted = false;
-      room.disconnect();
-    };
-  }, [room, roomName, participantName]);
-
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
-  }
-
-  if (!isConnected) {
-    return <div>Connecting...</div>;
-  }
-
+export function VoiceRoom({ token, onDisconnected }: VoiceRoomProps) {
   return (
-    <RoomContext.Provider value={room}>
+    <LiveKitRoom
+      token={token}
+      serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+      connect={true}
+      audio={true}  // Enable microphone
+      video={false} // Voice-only
+      onDisconnected={onDisconnected}
+      options={{
+        adaptiveStream: true,
+        dynacast: true,
+      }}
+    >
       <VoiceAssistantUI />
-    </RoomContext.Provider>
+      <RoomAudioRenderer /> {/* Required to hear agent audio */}
+    </LiveKitRoom>
   );
 }
 
@@ -434,6 +397,104 @@ function VoiceAssistantUI() {
       <p className="mt-4 text-lg capitalize">{state}</p>
     </div>
   );
+}
+```
+
+#### Token Fetching Pattern
+
+Token should be fetched before rendering `VoiceRoom`. This separation keeps
+the component simple and allows for proper loading/error states:
+
+```tsx
+// apps/web/src/features/voice-room/hooks/useToken.ts
+'use client';
+
+import { useState, useCallback } from 'react';
+
+interface UseTokenOptions {
+  roomName: string;
+  participantName: string;
+}
+
+interface UseTokenResult {
+  token: string | null;
+  error: string | null;
+  isLoading: boolean;
+  fetchToken: () => Promise<void>;
+}
+
+export function useToken({ roomName, participantName }: UseTokenOptions): UseTokenResult {
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchToken = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName, participantName }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setToken(data.token);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch token');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [roomName, participantName]);
+
+  return { token, error, isLoading, fetchToken };
+}
+```
+
+#### Room Page Usage
+
+```tsx
+// apps/web/src/app/room/[roomId]/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { VoiceRoom } from '@/features/voice-room';
+import { useToken } from '@/features/voice-room/hooks/useToken';
+
+export default function RoomPage() {
+  const params = useParams();
+  const roomId = params.roomId as string;
+  const [participantName] = useState(() => `user-${Date.now()}`);
+
+  const { token, error, isLoading, fetchToken } = useToken({
+    roomName: roomId,
+    participantName,
+  });
+
+  useEffect(() => {
+    fetchToken();
+  }, [fetchToken]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Connecting...</div>;
+  }
+
+  if (error) {
+    return <div className="flex items-center justify-center min-h-screen text-red-500">Error: {error}</div>;
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  return <VoiceRoom token={token} />;
 }
 ```
 
