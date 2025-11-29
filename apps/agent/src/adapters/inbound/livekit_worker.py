@@ -16,7 +16,9 @@ from livekit.agents import Agent
 from livekit.agents import AgentServer
 from livekit.agents import AgentSession
 from livekit.agents import JobContext
+from livekit.agents.voice import room_io
 from livekit.plugins import aws
+from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
@@ -75,7 +77,9 @@ def create_session(_settings: Settings | None = None) -> AgentSession:  # type: 
     # For now, use hardcoded values that will be moved to settings
     aws_region = "ap-northeast-1"
     stt_language = "ja-JP"
-    llm_model = "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+    # Cross-region inference profile for Claude Sonnet 4.5 (Japan region)
+    # See: https://aws.amazon.com/blogs/aws/introducing-claude-sonnet-4-5-in-amazon-bedrock/
+    llm_model = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
     tts_voice = "Kazuha"
     tts_language = "ja-JP"
 
@@ -128,6 +132,13 @@ async def entrypoint(ctx: JobContext) -> None:
     await session.start(
         room=ctx.room,
         agent=EchoSphereAssistant(),
+        room_options=room_io.RoomOptions(
+            audio_input=room_io.AudioInputOptions(
+                # Background Voice Cancellation removes background noise
+                # and non-primary speakers for cleaner STT
+                noise_cancellation=noise_cancellation.BVC(),
+            ),
+        ),
     )
 
     logger.info(
