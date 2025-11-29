@@ -79,7 +79,7 @@ uv run python -m livekit.agents download-files
 
 **Acceptance Criteria**:
 - [ ] Amazon Transcribe transcribes Japanese speech accurately
-- [ ] Amazon Bedrock (Claude 3.5) generates coherent Japanese responses
+- [ ] Amazon Bedrock (Claude Sonnet 4.5) generates coherent Japanese responses
 - [ ] Amazon Polly (Kazuha voice) produces natural Japanese audio
 - [ ] Full voice-to-voice pipeline works end-to-end
 - [ ] Latency < 2 seconds initially
@@ -101,7 +101,7 @@ session = AgentSession(
         speech_region="ap-northeast-1",
     ),
     llm=aws.LLM(
-        model="anthropic.claude-3-5-sonnet-20240620-v1:0",
+        model="apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
         region="ap-northeast-1",
         temperature=0.7,
     ),
@@ -147,7 +147,7 @@ session = AgentSession(
 CREATE TABLE sessions (
     id UUID PRIMARY KEY,
     room_name VARCHAR(255) NOT NULL,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255),  -- NULL = anonymous session (Phase 1)
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
     language VARCHAR(10) DEFAULT 'ja-JP',
     started_at TIMESTAMPTZ,
@@ -196,7 +196,7 @@ aws_region: str = "ap-northeast-1"
 
 # AI Models (AWS)
 stt_language: str = "ja-JP"
-llm_model: str = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+llm_model: str = "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
 tts_voice: str = "Kazuha"
 tts_language: str = "ja-JP"
 
@@ -342,30 +342,35 @@ POST /api/token
 ---
 
 #### Task 2.4: Voice Room Feature Module
-**Priority**: P0 | **Estimate**: 4-5 hours
+**Priority**: P0 | **Estimate**: 3-4 hours
 
 **Description**: Create the voice-room feature with core components.
 
 **Acceptance Criteria**:
 - [ ] VoiceRoom component connects to LiveKit using `<LiveKitRoom>`
 - [ ] Audio visualizer shows agent state via `useVoiceAssistant`
+- [ ] Control bar with mic toggle and disconnect via `<VoiceAssistantControlBar>`
+- [ ] Connection status displayed via `useConnectionState`
 - [ ] Token fetching handled separately from room component
-- [ ] Graceful error handling and loading states
 
 **Implementation Notes**:
 - Use `<LiveKitRoom>` component (not manual `Room.connect()`) to avoid React 18 Strict Mode issues
-- Separate token fetching logic into `useToken` hook
+- Use `<VoiceAssistantControlBar>` for mic toggle, device menu, and disconnect (no custom implementation)
+- Use `useConnectionState` for connection status (no custom implementation)
 - Include `<RoomAudioRenderer>` to enable agent audio playback
 
-**Components to Create**:
-1. `VoiceRoom.tsx` - LiveKitRoom wrapper with voice UI
-2. `AudioVisualizer.tsx` - BarVisualizer wrapper (optional extraction)
-3. `ConnectionStatus.tsx` - Connection state indicator
+**Built-in LiveKit Components Used**:
+| Component/Hook | Purpose |
+|----------------|---------|
+| `<LiveKitRoom>` | Connection management |
+| `<VoiceAssistantControlBar>` | Mic toggle, device selection, disconnect |
+| `<RoomAudioRenderer>` | Agent audio playback |
+| `<BarVisualizer>` | Audio visualization |
+| `useVoiceAssistant` | Agent state and audio track |
+| `useConnectionState` | Connection status |
 
 **Files to Create**:
 - `apps/web/src/features/voice-room/components/VoiceRoom.tsx`
-- `apps/web/src/features/voice-room/components/AudioVisualizer.tsx`
-- `apps/web/src/features/voice-room/components/ConnectionStatus.tsx`
 - `apps/web/src/features/voice-room/hooks/useToken.ts`
 - `apps/web/src/features/voice-room/types/index.ts`
 - `apps/web/src/features/voice-room/index.ts`
@@ -397,7 +402,7 @@ POST /api/token
 ---
 
 #### Task 2.6: Transcript Panel
-**Priority**: P1 | **Estimate**: 3-4 hours
+**Priority**: P1 | **Estimate**: 1-2 hours
 
 **Description**: Display real-time transcription of conversation.
 
@@ -407,14 +412,35 @@ POST /api/token
 - [ ] Auto-scroll to latest message
 - [ ] Visual distinction between speakers
 
-**Implementation**:
-- Subscribe to text streams from LiveKit
-- Parse transcription events
-- Display with speaker attribution
+**Implementation Notes**:
+- Use built-in `useSessionMessages` hook (combines transcripts + chat)
+- No custom transcript parsing needed - LiveKit handles `lk.transcription` topic
+- Messages are automatically sorted by timestamp and deduplicated
+
+**Key Code**:
+```tsx
+import { useSessionMessages } from '@livekit/components-react';
+
+function TranscriptPanel() {
+  const { messages } = useSessionMessages();
+
+  return (
+    <div className="overflow-y-auto">
+      {messages.map((msg) => (
+        <div key={msg.id} className={msg.type === 'userTranscript' ? 'text-right' : 'text-left'}>
+          <span className="text-xs text-gray-500">
+            {msg.type === 'userTranscript' ? 'You' : 'Agent'}
+          </span>
+          <p>{msg.message}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
 
 **Files to Create**:
 - `apps/web/src/features/voice-room/components/TranscriptPanel.tsx`
-- `apps/web/src/features/voice-room/hooks/useTranscript.ts`
 
 ---
 

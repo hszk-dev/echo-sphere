@@ -65,7 +65,7 @@ Phase 1 uses AWS services to avoid per-API-call charges from third-party provide
 | Component | Service | Japanese Support | Cost Model |
 |-----------|---------|------------------|------------|
 | **STT** | Amazon Transcribe | ✅ `ja-JP` | Per-second streaming |
-| **LLM** | Amazon Bedrock (Claude 3.5 Sonnet) | ✅ Native | Per-token |
+| **LLM** | Amazon Bedrock (Claude Sonnet 4.5) | ✅ Native | Per-token |
 | **TTS** | Amazon Polly | ✅ `Kazuha` (neural), `Takumi`, `Mizuki` | Per-character |
 
 ### 3.2 Why AWS?
@@ -85,7 +85,7 @@ Phase 1 uses AWS services to avoid per-API-call charges from third-party provide
 │  LiveKit Inference (Original)      AWS Services (Selected)       │
 │  ┌─────────────────────────┐      ┌─────────────────────────┐   │
 │  │ AssemblyAI (STT)        │  →   │ Amazon Transcribe       │   │
-│  │ OpenAI GPT-4.1-mini     │  →   │ Bedrock Claude 3.5      │   │
+│  │ OpenAI GPT-4.1-mini     │  →   │ Bedrock Claude Sonnet 4.5│  │
 │  │ Cartesia Sonic (TTS)    │  →   │ Amazon Polly Neural     │   │
 │  └─────────────────────────┘      └─────────────────────────┘   │
 │                                                                  │
@@ -240,7 +240,7 @@ async def voice_agent(ctx: agents.JobContext) -> None:
             speech_region=settings.aws_region,
         ),
         llm=aws.LLM(
-            model=settings.llm_model,  # "anthropic.claude-3-5-sonnet-20240620-v1:0"
+            model=settings.llm_model,  # "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
             region=settings.aws_region,
             temperature=0.7,
         ),
@@ -345,6 +345,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 > This avoids React 18 Strict Mode issues (double effect execution) and provides
 > optimized connection management, automatic cleanup, and built-in error handling.
 
+#### Built-in LiveKit Hooks Used
+
+| Hook/Component | Purpose | Replaces |
+|----------------|---------|----------|
+| `<LiveKitRoom>` | Connection management | Manual `Room.connect()` |
+| `<VoiceAssistantControlBar>` | Mic toggle, disconnect, device menu | Custom controls |
+| `useVoiceAssistant` | Agent state, audio track | Custom state management |
+| `useConnectionState` | Connection status | Custom status tracking |
+| `useSessionMessages` | Transcripts + chat combined | Custom transcript hook |
+
 ```tsx
 // apps/web/src/features/voice-room/components/VoiceRoom.tsx
 'use client';
@@ -352,8 +362,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 import {
   LiveKitRoom,
   useVoiceAssistant,
+  useConnectionState,
   BarVisualizer,
   RoomAudioRenderer,
+  VoiceAssistantControlBar,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 
@@ -384,9 +396,16 @@ export function VoiceRoom({ token, onDisconnected }: VoiceRoomProps) {
 
 function VoiceAssistantUI() {
   const { state, audioTrack } = useVoiceAssistant();
+  const connectionState = useConnectionState();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
+      {/* Connection Status */}
+      <div className="absolute top-4 right-4 text-sm text-gray-500">
+        {connectionState}
+      </div>
+
+      {/* Audio Visualizer */}
       <div className="w-64 h-64">
         <BarVisualizer
           state={state}
@@ -395,6 +414,9 @@ function VoiceAssistantUI() {
         />
       </div>
       <p className="mt-4 text-lg capitalize">{state}</p>
+
+      {/* Built-in Control Bar: mic toggle, device menu, disconnect */}
+      <VoiceAssistantControlBar controls={{ microphone: true, leave: true }} />
     </div>
   );
 }
@@ -529,7 +551,7 @@ Session data refers to information generated during a voice interaction:
 CREATE TABLE sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     room_name VARCHAR(255) NOT NULL,
-    user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(255),  -- NULL = anonymous session (Phase 1)
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
     language VARCHAR(10) DEFAULT 'ja-JP',
     started_at TIMESTAMPTZ,
@@ -645,7 +667,7 @@ class Settings(BaseSettings):
 
     # AI Model Configuration (AWS)
     stt_language: str = Field(default="ja-JP")  # Japanese by default
-    llm_model: str = Field(default="anthropic.claude-3-5-sonnet-20240620-v1:0")
+    llm_model: str = Field(default="apac.anthropic.claude-sonnet-4-5-20250929-v1:0")
     tts_voice: str = Field(default="Kazuha")  # Japanese neural voice
     tts_language: str = Field(default="ja-JP")
 
@@ -883,6 +905,23 @@ def setup_tracing(service_name: str, enabled: bool = True) -> None:
 - Room names should be UUIDs or hashed
 - No PII in room metadata
 - Participant identity validated server-side
+
+### 13.4 Known Limitations (Phase 1)
+
+The following security and feature limitations are accepted for Phase 1 and should be addressed in future phases:
+
+| Limitation | Description | Future Phase |
+|------------|-------------|--------------|
+| **No Authentication** | Token API (`/api/token`) has no authentication; anyone can generate tokens | Phase 2 |
+| **No Rate Limiting** | API endpoints lack rate limiting protection | Phase 2 |
+| **Minimal Input Validation** | Room name format and participant name length not strictly validated | Phase 2 |
+| **Anonymous Sessions** | `user_id` is nullable; no user identity verification | Phase 2 |
+| **No CORS Restrictions** | API accepts requests from any origin | Phase 2 |
+
+**Mitigation for Development**:
+- Use unique, unguessable room names (UUIDs)
+- Monitor LiveKit Cloud dashboard for unusual activity
+- Keep development environment isolated from production
 
 ---
 
