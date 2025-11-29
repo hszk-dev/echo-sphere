@@ -58,13 +58,26 @@ This document defines the exact technologies and versions used in EchoSphere. Al
 | livekit-agents | latest | Agent framework |
 | livekit | latest | LiveKit Python SDK |
 
-### AI/ML Services
+### AI/ML Services (AWS)
 
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| openai | latest | GPT-4o API client |
-| deepgram-sdk | latest | Speech-to-Text |
-| elevenlabs | latest | Text-to-Speech |
+| Technology | Version | Model/Config | Purpose |
+|------------|---------|--------------|---------|
+| livekit-plugins-aws | ~1.2 | - | AWS integration for LiveKit Agents |
+| Amazon Transcribe | - | ja-JP (streaming) | Speech-to-Text |
+| Amazon Bedrock | - | Claude Sonnet 4.5 | LLM for conversation |
+| Amazon Polly | - | Kazuha (neural) | Text-to-Speech (Japanese)
+
+#### AWS Bedrock Model IDs
+
+Bedrock requires Cross-Region Inference. Use region-prefixed model IDs:
+
+| Region | Model ID |
+|--------|----------|
+| US | `us.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| EU | `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| APAC | `apac.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+
+For `ap-northeast-1` (Tokyo), use the APAC prefix.
 
 ### Data & Validation
 
@@ -112,6 +125,14 @@ This document defines the exact technologies and versions used in EchoSphere. Al
 | SQS | Message queue for async processing |
 | Lambda | Event-driven workers |
 | RDS (PostgreSQL) | Metadata database |
+
+### AWS AI Services
+
+| Service | Model/Config | Purpose |
+|---------|--------------|---------|
+| Amazon Transcribe | ja-JP streaming | Real-time speech recognition |
+| Amazon Bedrock | Claude Sonnet 4.5 | LLM for conversation |
+| Amazon Polly | Kazuha (neural) | Japanese text-to-speech |
 
 ### Infrastructure as Code
 
@@ -170,6 +191,9 @@ The following are explicitly NOT used:
 | Redux | Overkill, use Zustand if needed |
 | Moment.js | Deprecated, use native Date or date-fns |
 | ESLint + Prettier | Replaced by Biome |
+| `openai` (Python) | Using AWS Bedrock for LLM |
+| `deepgram-sdk` | Using Amazon Transcribe |
+| `elevenlabs` | Using Amazon Polly |
 
 ## Configuration Files
 
