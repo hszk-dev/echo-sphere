@@ -1,0 +1,112 @@
+# ========================================
+# EchoSphere - .gitignore
+# Monorepo: Next.js (TypeScript) + Python
+# ========================================
+
+# ----------------------------------------
+# Dependencies
+# ----------------------------------------
+node_modules/
+.pnpm-store/
+__pypackages__/
+.venv/
+venv/
+env/
+.python-version
+
+# ----------------------------------------
+# Build outputs
+# ----------------------------------------
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Python
+*.py[cod]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+.eggs/
+
+# Turborepo
+.turbo/
+
+# ----------------------------------------
+# Environment & Secrets
+# ----------------------------------------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+secrets/
+
+# ----------------------------------------
+# IDE & Editor
+# ----------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----------------------------------------
+# Testing & Coverage
+# ----------------------------------------
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.nyc_output/
+*.lcov
+
+# ----------------------------------------
+# Logs & Debug
+# ----------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----------------------------------------
+# Type checking & Linting
+# ----------------------------------------
+*.tsbuildinfo
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+
+# ----------------------------------------
+# Infrastructure
+# ----------------------------------------
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+!*.tfvars.example
+
+# Pulumi
+.pulumi/
+
+# ----------------------------------------
+# Misc
+# ----------------------------------------
+*.bak
+*.tmp
+*.temp
+.cache/
