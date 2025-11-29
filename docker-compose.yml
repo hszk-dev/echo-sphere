@@ -13,7 +13,7 @@ services:
       - "7881:7881"   # RTC (TCP)
       - "7882:7882/udp" # RTC (UDP)
     environment:
-      - LIVEKIT_KEYS=devkey:secret
+      LIVEKIT_KEYS: "devkey: secret"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:7880"]
       interval: 5s
