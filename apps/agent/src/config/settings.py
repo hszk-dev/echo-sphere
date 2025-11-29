@@ -6,6 +6,7 @@ All configuration is loaded from environment variables.
 from functools import lru_cache
 
 from pydantic import Field
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -36,10 +37,10 @@ class Settings(BaseSettings):
     # LiveKit
     livekit_url: str = Field(default="ws://localhost:7880")
     livekit_api_key: str = Field(default="devkey")
-    livekit_api_secret: str = Field(default="secret")
+    livekit_api_secret: SecretStr = Field(default_factory=lambda: SecretStr("secret"))
 
     # OpenAI
-    openai_api_key: str = Field(default="")
+    openai_api_key: SecretStr = Field(default_factory=lambda: SecretStr(""))
 
     # Logging
     log_level: str = Field(default="INFO")

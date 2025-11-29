@@ -9,9 +9,11 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:unit": "turbo run test:unit",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
+    "lefthook": "^1.10.10",
     "turbo": "^2.3.3"
   }
 }
