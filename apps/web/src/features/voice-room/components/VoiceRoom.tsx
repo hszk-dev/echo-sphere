@@ -14,6 +14,7 @@ import { ConnectionState } from "livekit-client";
 import { useCallback, useEffect, useState } from "react";
 import { useToken } from "../hooks/useToken";
 import type { VoiceRoomProps } from "../types";
+import { TranscriptPanel } from "./TranscriptPanel";
 
 function ConnectionStatus() {
   const connectionState = useConnectionState();
@@ -61,11 +62,16 @@ function AgentVisualizer() {
 
 function RoomContent() {
   return (
-    <div className="flex flex-col items-center gap-8 p-8">
-      <ConnectionStatus />
-      <AgentVisualizer />
-      <RoomAudioRenderer />
-      <VoiceAssistantControlBar />
+    <div className="flex h-full w-full flex-col lg:flex-row">
+      <div className="flex flex-1 flex-col items-center justify-center gap-8 p-8">
+        <ConnectionStatus />
+        <AgentVisualizer />
+        <RoomAudioRenderer />
+        <VoiceAssistantControlBar />
+      </div>
+      <div className="h-64 border-t border-border lg:h-auto lg:w-80 lg:border-l lg:border-t-0">
+        <TranscriptPanel />
+      </div>
     </div>
   );
 }
