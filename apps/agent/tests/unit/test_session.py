@@ -75,3 +75,74 @@ class TestSession:
         session = Session(room_name="test-room", user_id="user-123")
 
         assert session.duration_seconds is None
+
+    def test_start_completed_session_raises(self) -> None:
+        """Starting a completed session should raise ValueError."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.start()
+        session.complete()
+
+        with pytest.raises(ValueError, match="Cannot start session"):
+            session.start()
+
+    def test_start_failed_session_raises(self) -> None:
+        """Starting a failed session should raise ValueError."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.fail()
+
+        with pytest.raises(ValueError, match="Cannot start session"):
+            session.start()
+
+    def test_complete_completed_session_raises(self) -> None:
+        """Completing an already completed session should raise ValueError."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.start()
+        session.complete()
+
+        with pytest.raises(ValueError, match="Cannot complete session"):
+            session.complete()
+
+    def test_complete_failed_session_raises(self) -> None:
+        """Completing a failed session should raise ValueError."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.fail()
+
+        with pytest.raises(ValueError, match="Cannot complete session"):
+            session.complete()
+
+    def test_fail_pending_session(self) -> None:
+        """Failing a pending session should work."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.fail()
+
+        assert session.status == SessionStatus.FAILED
+        assert session.ended_at is not None
+
+    def test_fail_completed_session(self) -> None:
+        """Failing a completed session should work (override status)."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.start()
+        session.complete()
+        session.fail()
+
+        assert session.status == SessionStatus.FAILED
+
+    def test_session_id_is_unique(self) -> None:
+        """Each session should have a unique ID."""
+        session1 = Session(room_name="room-1", user_id="user-123")
+        session2 = Session(room_name="room-2", user_id="user-456")
+
+        assert session1.id != session2.id
+
+    def test_created_at_is_set_automatically(self) -> None:
+        """created_at should be set automatically on creation."""
+        session = Session(room_name="test-room", user_id="user-123")
+
+        assert session.created_at is not None
+
+    def test_duration_with_only_started(self) -> None:
+        """Duration should be None when only started but not ended."""
+        session = Session(room_name="test-room", user_id="user-123")
+        session.start()
+
+        assert session.duration_seconds is None

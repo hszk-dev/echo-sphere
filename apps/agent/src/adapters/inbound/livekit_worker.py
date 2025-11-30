@@ -24,9 +24,11 @@ from livekit.agents import AgentSession
 from livekit.agents import CloseEvent
 from livekit.agents import ConversationItemAddedEvent
 from livekit.agents import JobContext
+from livekit.agents import metrics
 from livekit.plugins import aws
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from opentelemetry import trace
 
 from src.adapters.outbound import Database
 from src.adapters.outbound import PostgresSessionRepository
@@ -36,7 +38,12 @@ from src.domain.entities import MessageRole
 from src.domain.entities import Session
 
 if TYPE_CHECKING:
+    from livekit.agents.voice import MetricsCollectedEvent
+
     from src.config.settings import Settings
+
+# Service name for custom spans
+_SERVICE_NAME = "echo-sphere-agent"
 
 logger = logging.getLogger(__name__)
 
@@ -70,22 +77,27 @@ class EchoSphereAssistant(Agent):
 
     Attributes:
         instructions: The system prompt for the agent.
+        greeting_prompt: The prompt for generating the initial greeting.
     """
 
-    def __init__(self, instructions: str | None = None) -> None:
+    def __init__(
+        self,
+        instructions: str | None = None,
+        greeting_prompt: str | None = None,
+    ) -> None:
         """Initialize the EchoSphere assistant.
 
         Args:
             instructions: Custom instructions for the agent.
-                Defaults to a helpful Japanese assistant prompt.
+                Defaults to settings value or a helpful Japanese assistant prompt.
+            greeting_prompt: Prompt for generating initial greeting.
+                Defaults to settings value.
         """
-        default_instructions = """You are a helpful voice AI assistant for EchoSphere.
-You assist users with their questions in a friendly and professional manner.
-Your responses are concise, clear, and natural for spoken conversation.
-You speak Japanese unless the user speaks in another language."""
+        settings = get_settings()
+        self._greeting_prompt = greeting_prompt or settings.agent_greeting_prompt
 
         super().__init__(
-            instructions=instructions or default_instructions,
+            instructions=instructions or settings.agent_instructions,
         )
 
     async def on_enter(self) -> None:
@@ -93,40 +105,33 @@ You speak Japanese unless the user speaks in another language."""
 
         Generates an initial greeting for the user.
         """
-        self.session.generate_reply(
-            instructions="Greet the user warmly in Japanese and offer your assistance."
-        )
+        self.session.generate_reply(instructions=self._greeting_prompt)
 
 
-def create_session(_settings: Settings | None = None) -> AgentSession[Any]:
+def create_session(settings: Settings | None = None) -> AgentSession[Any]:
     """Create an AgentSession with AWS AI services.
 
     Args:
-        settings: Application settings. If None, uses defaults.
+        settings: Application settings. If None, loads from environment.
 
     Returns:
         Configured AgentSession with STT, LLM, TTS, and VAD.
     """
-    # TODO: Use settings for configuration (Task 1.5)
-    # For now, use hardcoded values that will be moved to settings
-    aws_region = "ap-northeast-1"
-    stt_language = "ja-JP"
-    llm_model = "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    tts_voice = "Kazuha"
-    tts_language = "ja-JP"
+    if settings is None:
+        settings = get_settings()
 
     return AgentSession(
         # AWS AI Services for Japanese support
         stt=aws.STT(
-            language=stt_language,
+            language=settings.stt_language,
         ),
         llm=aws.LLM(
-            model=llm_model,
-            region=aws_region,
+            model=settings.llm_model,
+            region=settings.aws_region,
         ),
         tts=aws.TTS(
-            voice=tts_voice,
-            language=tts_language,
+            voice=settings.tts_voice,
+            language=settings.tts_language,
             speech_engine="neural",
         ),
         # Voice activity detection
@@ -283,6 +288,19 @@ def _setup_close_handler(
         close_event.set()
 
 
+def _setup_metrics_handler(agent_session: AgentSession[Any]) -> None:
+    """Set up the metrics collection event handler.
+
+    Args:
+        agent_session: The LiveKit agent session.
+    """
+
+    @agent_session.on("metrics_collected")
+    def on_metrics_collected(ev: MetricsCollectedEvent) -> None:
+        """Log metrics for STT, LLM, and TTS operations."""
+        metrics.log_metrics(ev.metrics)
+
+
 async def _wait_for_background_tasks(session_ctx: SessionContext) -> None:
     """Wait for pending background tasks to complete.
 
@@ -316,70 +334,89 @@ async def entrypoint(ctx: JobContext) -> None:
     Args:
         ctx: The job context containing room information.
     """
-    # Initialize session context
-    is_console_mode = ctx.room.name == "mock_room"
-    session_ctx = SessionContext(
-        db=None if is_console_mode else get_database(),
-        is_console_mode=is_console_mode,
-    )
+    tracer = trace.get_tracer(_SERVICE_NAME)
 
-    logger.info(
-        "Entrypoint called",
-        extra={"room_name": ctx.room.name, "console_mode": is_console_mode},
-    )
+    with tracer.start_as_current_span(
+        "agent_session",
+        attributes={"room.name": ctx.room.name},
+    ) as session_span:
+        # Initialize session context
+        is_console_mode = ctx.room.name == "mock_room"
+        session_ctx = SessionContext(
+            db=None if is_console_mode else get_database(),
+            is_console_mode=is_console_mode,
+        )
 
-    if is_console_mode:
-        logger.info("Console mode: database operations disabled")
+        session_span.set_attribute("session.console_mode", is_console_mode)
 
-    # Create agent session and close event
-    agent_session = create_session()
-    close_event = asyncio.Event()
+        logger.info(
+            "Entrypoint called",
+            extra={"room_name": ctx.room.name, "console_mode": is_console_mode},
+        )
 
-    # Set up event handlers
-    _setup_conversation_handler(agent_session, session_ctx)
-    _setup_close_handler(agent_session, session_ctx, close_event)
+        if is_console_mode:
+            logger.info("Console mode: database operations disabled")
 
-    # Start agent session
-    await agent_session.start(
-        room=ctx.room,
-        agent=EchoSphereAssistant(),
-    )
+        # Create agent session and close event
+        with tracer.start_as_current_span("create_agent_session"):
+            agent_session = create_session()
+            close_event = asyncio.Event()
 
-    # Resolve room SID and create domain session
-    room_sid = await _resolve_room_sid(ctx)
-    logger.info(
-        "Agent session started",
-        extra={"room_name": ctx.room.name, "room_sid": room_sid},
-    )
+            # Set up event handlers
+            _setup_conversation_handler(agent_session, session_ctx)
+            _setup_close_handler(agent_session, session_ctx, close_event)
+            _setup_metrics_handler(agent_session)
 
-    # Create and initialize domain session
-    session_ctx.domain_session = Session(
-        room_name=ctx.room.name,
-        user_id=room_sid,
-    )
+        # Start agent session
+        with tracer.start_as_current_span("start_agent_session"):
+            await agent_session.start(
+                room=ctx.room,
+                agent=EchoSphereAssistant(),
+            )
 
-    # Save initial session (pending status)
-    await _save_session_safe(session_ctx, "create")
+            # Resolve room SID and create domain session
+            room_sid = await _resolve_room_sid(ctx)
 
-    # Start the session (transition to active)
-    session_ctx.domain_session.start()
-    await _save_session_safe(session_ctx, "start")
+        session_span.set_attribute("room.sid", room_sid)
+        logger.info(
+            "Agent session started",
+            extra={"room_name": ctx.room.name, "room_sid": room_sid},
+        )
 
-    # Wait for the session to close
-    await close_event.wait()
+        # Create and initialize domain session
+        session_ctx.domain_session = Session(
+            room_name=ctx.room.name,
+            user_id=room_sid,
+        )
+        session_span.set_attribute("session.id", str(session_ctx.domain_session.id))
 
-    # Wait for pending background tasks before cleanup
-    await _wait_for_background_tasks(session_ctx)
+        # Save initial session (pending status)
+        await _save_session_safe(session_ctx, "create")
 
-    # Mark session as complete and save
-    session_ctx.domain_session.complete()
-    await _save_session_safe(session_ctx, "complete")
+        # Start the session (transition to active)
+        session_ctx.domain_session.start()
+        await _save_session_safe(session_ctx, "start")
 
-    logger.info(
-        "Agent session completed",
-        extra={
-            "room_name": ctx.room.name,
-            "session_id": str(session_ctx.domain_session.id),
-            "duration_seconds": session_ctx.domain_session.duration_seconds,
-        },
-    )
+        # Wait for the session to close
+        await close_event.wait()
+
+        # Wait for pending background tasks before cleanup
+        await _wait_for_background_tasks(session_ctx)
+
+        # Mark session as complete and save
+        session_ctx.domain_session.complete()
+        await _save_session_safe(session_ctx, "complete")
+
+        # Record session duration
+        duration = session_ctx.domain_session.duration_seconds
+        session_span.set_attribute("session.duration_seconds", duration or 0)
+        session_span.set_status(trace.StatusCode.OK)
+
+        logger.info(
+            "Agent session completed",
+            extra={
+                "room_name": ctx.room.name,
+                "session_id": str(session_ctx.domain_session.id),
+                "duration_seconds": duration,
+            },
+        )

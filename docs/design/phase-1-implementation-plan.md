@@ -101,7 +101,7 @@ session = AgentSession(
         speech_region="ap-northeast-1",
     ),
     llm=aws.LLM(
-        model="apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
         region="ap-northeast-1",
         temperature=0.7,
     ),
@@ -196,7 +196,7 @@ aws_region: str = "ap-northeast-1"
 
 # AI Models (AWS)
 stt_language: str = "ja-JP"
-llm_model: str = "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+llm_model: str = "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
 tts_voice: str = "Kazuha"
 tts_language: str = "ja-JP"
 

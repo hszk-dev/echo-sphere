@@ -75,7 +75,7 @@ Bedrock requires Cross-Region Inference. Use region-prefixed model IDs:
 |--------|----------|
 | US | `us.anthropic.claude-sonnet-4-5-20250929-v1:0` |
 | EU | `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` |
-| APAC | `apac.anthropic.claude-sonnet-4-5-20250929-v1:0` |
+| APAC | `jp.anthropic.claude-sonnet-4-5-20250929-v1:0` |
 
 For `ap-northeast-1` (Tokyo), use the APAC prefix.
 
