@@ -1,6 +1,10 @@
 "use client";
 
-import { useTranscriptions, useVoiceAssistant } from "@livekit/components-react";
+import {
+  useLocalParticipant,
+  useTranscriptions,
+  useVoiceAssistant,
+} from "@livekit/components-react";
 import { useEffect, useMemo, useRef } from "react";
 
 interface TranscriptMessage {
@@ -12,7 +16,12 @@ interface TranscriptMessage {
 
 export function TranscriptPanel() {
   const { agentTranscriptions } = useVoiceAssistant();
-  const userTranscriptions = useTranscriptions();
+  const { localParticipant } = useLocalParticipant();
+
+  // Filter transcriptions to only include the local participant (user)
+  const userTranscriptions = useTranscriptions({
+    participantIdentities: localParticipant?.identity ? [localParticipant.identity] : [],
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Combine and sort messages from agent and user transcriptions
