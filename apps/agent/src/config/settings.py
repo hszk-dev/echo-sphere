@@ -103,6 +103,20 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = Field(default="INFO")
 
+    # OpenTelemetry
+    otel_enabled: bool = Field(
+        default=False,
+        description="Enable OpenTelemetry tracing",
+    )
+    otel_service_name: str = Field(
+        default="echo-sphere-agent",
+        description="Service name for OpenTelemetry",
+    )
+    otel_exporter_otlp_endpoint: str = Field(
+        default="http://localhost:4317",
+        description="OTLP exporter endpoint URL",
+    )
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:

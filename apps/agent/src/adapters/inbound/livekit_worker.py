@@ -27,10 +27,12 @@ from livekit.agents import JobContext
 from livekit.plugins import aws
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
+from opentelemetry import trace
 
 from src.adapters.outbound import Database
 from src.adapters.outbound import PostgresSessionRepository
 from src.config.settings import get_settings
+from src.config.tracing import get_tracer
 from src.domain.entities import Message
 from src.domain.entities import MessageRole
 from src.domain.entities import Session
@@ -314,70 +316,88 @@ async def entrypoint(ctx: JobContext) -> None:
     Args:
         ctx: The job context containing room information.
     """
-    # Initialize session context
-    is_console_mode = ctx.room.name == "mock_room"
-    session_ctx = SessionContext(
-        db=None if is_console_mode else get_database(),
-        is_console_mode=is_console_mode,
-    )
+    tracer = get_tracer()
 
-    logger.info(
-        "Entrypoint called",
-        extra={"room_name": ctx.room.name, "console_mode": is_console_mode},
-    )
+    with tracer.start_as_current_span(
+        "agent_session",
+        attributes={"room.name": ctx.room.name},
+    ) as session_span:
+        # Initialize session context
+        is_console_mode = ctx.room.name == "mock_room"
+        session_ctx = SessionContext(
+            db=None if is_console_mode else get_database(),
+            is_console_mode=is_console_mode,
+        )
 
-    if is_console_mode:
-        logger.info("Console mode: database operations disabled")
+        session_span.set_attribute("session.console_mode", is_console_mode)
 
-    # Create agent session and close event
-    agent_session = create_session()
-    close_event = asyncio.Event()
+        logger.info(
+            "Entrypoint called",
+            extra={"room_name": ctx.room.name, "console_mode": is_console_mode},
+        )
 
-    # Set up event handlers
-    _setup_conversation_handler(agent_session, session_ctx)
-    _setup_close_handler(agent_session, session_ctx, close_event)
+        if is_console_mode:
+            logger.info("Console mode: database operations disabled")
 
-    # Start agent session
-    await agent_session.start(
-        room=ctx.room,
-        agent=EchoSphereAssistant(),
-    )
+        # Create agent session and close event
+        with tracer.start_as_current_span("create_agent_session"):
+            agent_session = create_session()
+            close_event = asyncio.Event()
 
-    # Resolve room SID and create domain session
-    room_sid = await _resolve_room_sid(ctx)
-    logger.info(
-        "Agent session started",
-        extra={"room_name": ctx.room.name, "room_sid": room_sid},
-    )
+            # Set up event handlers
+            _setup_conversation_handler(agent_session, session_ctx)
+            _setup_close_handler(agent_session, session_ctx, close_event)
 
-    # Create and initialize domain session
-    session_ctx.domain_session = Session(
-        room_name=ctx.room.name,
-        user_id=room_sid,
-    )
+        # Start agent session
+        with tracer.start_as_current_span("start_agent_session"):
+            await agent_session.start(
+                room=ctx.room,
+                agent=EchoSphereAssistant(),
+            )
 
-    # Save initial session (pending status)
-    await _save_session_safe(session_ctx, "create")
+            # Resolve room SID and create domain session
+            room_sid = await _resolve_room_sid(ctx)
 
-    # Start the session (transition to active)
-    session_ctx.domain_session.start()
-    await _save_session_safe(session_ctx, "start")
+        session_span.set_attribute("room.sid", room_sid)
+        logger.info(
+            "Agent session started",
+            extra={"room_name": ctx.room.name, "room_sid": room_sid},
+        )
 
-    # Wait for the session to close
-    await close_event.wait()
+        # Create and initialize domain session
+        session_ctx.domain_session = Session(
+            room_name=ctx.room.name,
+            user_id=room_sid,
+        )
+        session_span.set_attribute("session.id", str(session_ctx.domain_session.id))
 
-    # Wait for pending background tasks before cleanup
-    await _wait_for_background_tasks(session_ctx)
+        # Save initial session (pending status)
+        await _save_session_safe(session_ctx, "create")
 
-    # Mark session as complete and save
-    session_ctx.domain_session.complete()
-    await _save_session_safe(session_ctx, "complete")
+        # Start the session (transition to active)
+        session_ctx.domain_session.start()
+        await _save_session_safe(session_ctx, "start")
 
-    logger.info(
-        "Agent session completed",
-        extra={
-            "room_name": ctx.room.name,
-            "session_id": str(session_ctx.domain_session.id),
-            "duration_seconds": session_ctx.domain_session.duration_seconds,
-        },
-    )
+        # Wait for the session to close
+        await close_event.wait()
+
+        # Wait for pending background tasks before cleanup
+        await _wait_for_background_tasks(session_ctx)
+
+        # Mark session as complete and save
+        session_ctx.domain_session.complete()
+        await _save_session_safe(session_ctx, "complete")
+
+        # Record session duration
+        duration = session_ctx.domain_session.duration_seconds
+        session_span.set_attribute("session.duration_seconds", duration or 0)
+        session_span.set_status(trace.StatusCode.OK)
+
+        logger.info(
+            "Agent session completed",
+            extra={
+                "room_name": ctx.room.name,
+                "session_id": str(session_ctx.domain_session.id),
+                "duration_seconds": duration,
+            },
+        )
