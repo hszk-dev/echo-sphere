@@ -9,7 +9,7 @@ import pytest
 from src.application.ports import EgressConfig
 from src.application.ports import EgressInfo
 from src.application.ports import EgressStatus
-from src.application.ports import StorageObject
+from src.application.ports import ObjectInfo
 from src.application.use_cases import RecordingAlreadyExistsError
 from src.application.use_cases import RecordingNotFoundError
 from src.application.use_cases import RecordingService
@@ -308,7 +308,7 @@ class TestHandleEgressEvent:
         recording.activate()
         mock_recording_repo.get_by_egress_id.return_value = recording
         mock_storage_port.generate_presigned_url.return_value = "https://example.com/playlist.m3u8"
-        mock_storage_port.get_object_info.return_value = StorageObject(
+        mock_storage_port.get_object_info.return_value = ObjectInfo(
             bucket="test-bucket",
             key="recordings/test/index.m3u8",
             size_bytes=1024,

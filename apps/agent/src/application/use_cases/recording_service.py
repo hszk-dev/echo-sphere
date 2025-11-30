@@ -281,13 +281,13 @@ class RecordingService:
     async def _complete_recording(
         self,
         recording: Recording,
-        _egress_info: EgressInfo,
+        egress_info: EgressInfo,
     ) -> None:
         """Complete a recording after egress finishes.
 
         Args:
             recording: The recording to complete.
-            _egress_info: Egress completion information (reserved for future use).
+            egress_info: Egress completion information with duration and file size.
         """
         # Ensure recording is in processing state
         if recording.status == RecordingStatus.ACTIVE:
@@ -301,16 +301,17 @@ class RecordingService:
             expiry_seconds=self._presigned_url_expiry,
         )
 
-        # Get file size (approximate from storage)
-        obj_info = await self._storage.get_object_info(
-            bucket=recording.storage_bucket,
-            key=playlist_key,
-        )
-        file_size = obj_info.size_bytes if obj_info else 0
+        # Use egress_info values if available, fallback to storage lookup
+        duration_seconds = egress_info.duration_seconds or 0
+        file_size = egress_info.file_size_bytes
 
-        # Complete the recording
-        # Duration will be calculated from segments in a real implementation
-        duration_seconds = 0  # TODO: Calculate from segments
+        if file_size is None:
+            # Fallback: get file size from storage if not in egress_info
+            obj_info = await self._storage.get_object_info(
+                bucket=recording.storage_bucket,
+                key=playlist_key,
+            )
+            file_size = obj_info.size_bytes if obj_info else 0
 
         recording.complete(
             playlist_url=playlist_url,
@@ -323,6 +324,8 @@ class RecordingService:
             "recording_completed",
             recording_id=str(recording.id),
             playlist_url=playlist_url,
+            duration_seconds=duration_seconds,
+            file_size_bytes=file_size,
         )
 
     async def get_playback_url(

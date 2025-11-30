@@ -124,7 +124,7 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
 
     async def list_by_status(
         self,
-        status: str,
+        status: RecordingStatus,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Recording]:
@@ -140,7 +140,7 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
         """
         stmt = (
             select(RecordingModel)
-            .where(RecordingModel.status == status)
+            .where(RecordingModel.status == status.value)
             .order_by(RecordingModel.created_at.desc())
             .limit(limit)
             .offset(offset)

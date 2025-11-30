@@ -2,26 +2,20 @@
 
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import dataclass
+
+from src.domain.value_objects import ObjectInfo
 
 
-@dataclass
-class StorageObject:
-    """Information about a stored object.
+class StorageError(Exception):
+    """Base exception for storage operations."""
 
-    Attributes:
-        bucket: S3 bucket name.
-        key: Object key/path.
-        size_bytes: Object size in bytes.
-        content_type: MIME content type.
-        url: Direct URL to the object.
-    """
+    pass
 
-    bucket: str
-    key: str
-    size_bytes: int
-    content_type: str | None = None
-    url: str | None = None
+
+class ObjectNotFoundError(StorageError):
+    """Raised when an object is not found."""
+
+    pass
 
 
 class StoragePort(ABC):
@@ -53,7 +47,7 @@ class StoragePort(ABC):
         ...
 
     @abstractmethod
-    async def get_object_info(self, bucket: str, key: str) -> StorageObject | None:
+    async def get_object_info(self, bucket: str, key: str) -> ObjectInfo | None:
         """Get information about a stored object.
 
         Args:
@@ -94,5 +88,27 @@ class StoragePort(ABC):
 
         Raises:
             StorageError: If deletion fails.
+        """
+        ...
+
+    @abstractmethod
+    async def list_objects(
+        self,
+        bucket: str,
+        prefix: str,
+        max_keys: int = 1000,
+    ) -> list[ObjectInfo]:
+        """List objects in a bucket with a given prefix.
+
+        Args:
+            bucket: S3 bucket name.
+            prefix: Key prefix to filter objects.
+            max_keys: Maximum number of keys to return.
+
+        Returns:
+            List of ObjectInfo for matching objects.
+
+        Raises:
+            StorageError: If listing fails.
         """
         ...

@@ -5,6 +5,7 @@ from abc import abstractmethod
 from uuid import UUID
 
 from src.domain.entities import Recording
+from src.domain.entities import RecordingStatus
 
 
 class RecordingRepositoryPort(ABC):
@@ -73,7 +74,7 @@ class RecordingRepositoryPort(ABC):
     @abstractmethod
     async def list_by_status(
         self,
-        status: str,
+        status: RecordingStatus,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Recording]:

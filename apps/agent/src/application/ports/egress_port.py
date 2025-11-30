@@ -2,58 +2,27 @@
 
 from abc import ABC
 from abc import abstractmethod
-from dataclasses import dataclass
-from enum import StrEnum
+
+from src.domain.value_objects import EgressConfig
+from src.domain.value_objects import EgressInfo
 
 
-class EgressStatus(StrEnum):
-    """Status of an egress operation."""
+class EgressError(Exception):
+    """Base exception for egress operations."""
 
-    STARTING = "starting"
-    ACTIVE = "active"
-    ENDING = "ending"
-    COMPLETE = "complete"
-    FAILED = "failed"
+    pass
 
 
-@dataclass
-class EgressInfo:
-    """Information about an egress operation.
+class EgressNotFoundError(EgressError):
+    """Raised when an egress recording is not found."""
 
-    Attributes:
-        egress_id: LiveKit egress ID.
-        room_name: Room being recorded.
-        status: Current egress status.
-        file_path: Output file path in storage.
-        error: Error message if failed.
-    """
-
-    egress_id: str
-    room_name: str
-    status: EgressStatus
-    file_path: str | None = None
-    error: str | None = None
+    pass
 
 
-@dataclass
-class EgressConfig:
-    """Configuration for starting an egress.
+class EgressAlreadyExistsError(EgressError):
+    """Raised when trying to create a duplicate egress."""
 
-    Attributes:
-        room_name: Room to record.
-        output_bucket: S3 bucket for output.
-        output_path: Path within bucket.
-        width: Video width in pixels.
-        height: Video height in pixels.
-        segment_duration: HLS segment duration in seconds.
-    """
-
-    room_name: str
-    output_bucket: str
-    output_path: str
-    width: int = 1280
-    height: int = 720
-    segment_duration: int = 4
+    pass
 
 
 class EgressPort(ABC):
