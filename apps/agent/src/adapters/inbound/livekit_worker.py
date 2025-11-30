@@ -24,6 +24,7 @@ from livekit.agents import AgentSession
 from livekit.agents import CloseEvent
 from livekit.agents import ConversationItemAddedEvent
 from livekit.agents import JobContext
+from livekit.agents import metrics
 from livekit.plugins import aws
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
@@ -32,13 +33,17 @@ from opentelemetry import trace
 from src.adapters.outbound import Database
 from src.adapters.outbound import PostgresSessionRepository
 from src.config.settings import get_settings
-from src.config.tracing import get_tracer
 from src.domain.entities import Message
 from src.domain.entities import MessageRole
 from src.domain.entities import Session
 
 if TYPE_CHECKING:
+    from livekit.agents.voice import MetricsCollectedEvent
+
     from src.config.settings import Settings
+
+# Service name for custom spans
+_SERVICE_NAME = "echo-sphere-agent"
 
 logger = logging.getLogger(__name__)
 
@@ -283,6 +288,19 @@ def _setup_close_handler(
         close_event.set()
 
 
+def _setup_metrics_handler(agent_session: AgentSession[Any]) -> None:
+    """Set up the metrics collection event handler.
+
+    Args:
+        agent_session: The LiveKit agent session.
+    """
+
+    @agent_session.on("metrics_collected")
+    def on_metrics_collected(ev: MetricsCollectedEvent) -> None:
+        """Log metrics for STT, LLM, and TTS operations."""
+        metrics.log_metrics(ev.metrics)
+
+
 async def _wait_for_background_tasks(session_ctx: SessionContext) -> None:
     """Wait for pending background tasks to complete.
 
@@ -316,7 +334,7 @@ async def entrypoint(ctx: JobContext) -> None:
     Args:
         ctx: The job context containing room information.
     """
-    tracer = get_tracer()
+    tracer = trace.get_tracer(_SERVICE_NAME)
 
     with tracer.start_as_current_span(
         "agent_session",
@@ -347,6 +365,7 @@ async def entrypoint(ctx: JobContext) -> None:
             # Set up event handlers
             _setup_conversation_handler(agent_session, session_ctx)
             _setup_close_handler(agent_session, session_ctx, close_event)
+            _setup_metrics_handler(agent_session)
 
         # Start agent session
         with tracer.start_as_current_span("start_agent_session"):

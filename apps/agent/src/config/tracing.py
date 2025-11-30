@@ -1,6 +1,7 @@
-"""OpenTelemetry tracing configuration.
+"""OpenTelemetry tracing configuration using LiveKit's official API.
 
-Provides distributed tracing for observability across services.
+Provides distributed tracing for observability across services,
+integrating with LiveKit's internal tracer for STT/LLM/TTS spans.
 """
 
 from __future__ import annotations
@@ -8,30 +9,45 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from opentelemetry import trace
+from livekit.agents.telemetry import set_tracer_provider
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 if TYPE_CHECKING:
+    from opentelemetry.util.types import AttributeValue
+
     from src.config.settings import Settings
 
 logger = logging.getLogger(__name__)
 
-# Default service name for tracer
-_SERVICE_NAME = "echo-sphere-agent"
+# Module-level tracer provider instance
+_tracer_provider: TracerProvider | None = None
 
 
-def setup_tracing(settings: Settings) -> None:
-    """Configure OpenTelemetry tracing.
+def setup_tracing(
+    settings: Settings,
+    *,
+    metadata: dict[str, AttributeValue] | None = None,
+) -> TracerProvider | None:
+    """Configure OpenTelemetry tracing using LiveKit's official API.
+
+    This function sets up tracing that integrates with LiveKit's internal
+    tracer, enabling automatic spans for STT, LLM, and TTS operations.
 
     Args:
         settings: Application settings containing OTEL configuration.
+        metadata: Optional metadata to attach to all spans.
+
+    Returns:
+        TracerProvider if tracing is enabled, None otherwise.
     """
+    global _tracer_provider  # noqa: PLW0603
+
     if not settings.otel_enabled:
         logger.info("OpenTelemetry tracing is disabled")
-        return
+        return None
 
     # Create resource with service information
     resource = Resource.create(
@@ -42,7 +58,7 @@ def setup_tracing(settings: Settings) -> None:
     )
 
     # Create tracer provider
-    provider = TracerProvider(resource=resource)
+    _tracer_provider = TracerProvider(resource=resource)
 
     # Configure OTLP exporter
     exporter = OTLPSpanExporter(
@@ -52,36 +68,38 @@ def setup_tracing(settings: Settings) -> None:
 
     # Add batch processor for efficient export
     processor = BatchSpanProcessor(exporter)
-    provider.add_span_processor(processor)
+    _tracer_provider.add_span_processor(processor)
 
-    # Set as global tracer provider
-    trace.set_tracer_provider(provider)
+    # Register with LiveKit's internal tracer
+    # This enables automatic spans for STT, LLM, and TTS operations
+    set_tracer_provider(_tracer_provider, metadata=metadata)
 
     logger.info(
-        "OpenTelemetry tracing initialized",
+        "OpenTelemetry tracing initialized (LiveKit integration)",
         extra={
             "service_name": settings.otel_service_name,
             "endpoint": settings.otel_exporter_otlp_endpoint,
         },
     )
 
+    return _tracer_provider
 
-def get_tracer(name: str | None = None) -> trace.Tracer:
-    """Get the configured tracer instance.
 
-    Args:
-        name: Optional tracer name. Defaults to service name.
+def get_tracer_provider() -> TracerProvider | None:
+    """Get the configured tracer provider instance.
 
     Returns:
-        Tracer: OpenTelemetry tracer instance.
-            Returns a no-op tracer if tracing is not initialized.
+        TracerProvider if tracing is enabled, None otherwise.
     """
-    return trace.get_tracer(name or _SERVICE_NAME)
+    return _tracer_provider
 
 
 def shutdown_tracing() -> None:
     """Shutdown the tracer provider and flush pending spans."""
-    provider = trace.get_tracer_provider()
-    if isinstance(provider, TracerProvider):
-        provider.shutdown()
+    global _tracer_provider  # noqa: PLW0603
+
+    if _tracer_provider is not None:
+        _tracer_provider.force_flush()
+        _tracer_provider.shutdown()
         logger.info("OpenTelemetry tracing shutdown complete")
+        _tracer_provider = None
