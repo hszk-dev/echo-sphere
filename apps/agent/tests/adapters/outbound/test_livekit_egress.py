@@ -87,9 +87,7 @@ class TestStartRoomComposite:
         """Should raise EgressError when API call fails."""
         with patch.object(adapter, "_get_api") as mock_get_api:
             mock_api = AsyncMock()
-            mock_api.egress.start_room_composite_egress.side_effect = Exception(
-                "Connection failed"
-            )
+            mock_api.egress.start_room_composite_egress.side_effect = Exception("Connection failed")
             mock_get_api.return_value = mock_api
 
             with pytest.raises(EgressError, match="Failed to start egress"):
@@ -99,9 +97,7 @@ class TestStartRoomComposite:
 class TestStopEgress:
     """Tests for stop_egress method."""
 
-    async def test_stops_egress_successfully(
-        self, adapter: LiveKitEgressAdapter
-    ) -> None:
+    async def test_stops_egress_successfully(self, adapter: LiveKitEgressAdapter) -> None:
         """Should stop egress and return updated EgressInfo."""
         mock_egress_info = MagicMock()
         mock_egress_info.egress_id = "egress-123"
@@ -122,15 +118,11 @@ class TestStopEgress:
             assert result.egress_id == "egress-123"
             assert result.status == EgressStatus.ENDING
 
-    async def test_raises_not_found_error(
-        self, adapter: LiveKitEgressAdapter
-    ) -> None:
+    async def test_raises_not_found_error(self, adapter: LiveKitEgressAdapter) -> None:
         """Should raise EgressNotFoundError when egress not found."""
         with patch.object(adapter, "_get_api") as mock_get_api:
             mock_api = AsyncMock()
-            mock_api.egress.stop_egress.side_effect = Exception(
-                "egress not found"
-            )
+            mock_api.egress.stop_egress.side_effect = Exception("egress not found")
             mock_get_api.return_value = mock_api
 
             with pytest.raises(EgressNotFoundError, match="not found"):
@@ -140,9 +132,7 @@ class TestStopEgress:
 class TestGetEgressInfo:
     """Tests for get_egress_info method."""
 
-    async def test_gets_egress_info_successfully(
-        self, adapter: LiveKitEgressAdapter
-    ) -> None:
+    async def test_gets_egress_info_successfully(self, adapter: LiveKitEgressAdapter) -> None:
         """Should return EgressInfo for existing egress."""
         mock_egress_info = MagicMock()
         mock_egress_info.egress_id = "egress-123"
@@ -167,9 +157,7 @@ class TestGetEgressInfo:
             assert result.egress_id == "egress-123"
             assert result.status == EgressStatus.ACTIVE
 
-    async def test_returns_none_when_empty_results(
-        self, adapter: LiveKitEgressAdapter
-    ) -> None:
+    async def test_returns_none_when_empty_results(self, adapter: LiveKitEgressAdapter) -> None:
         """Should return None when no results."""
         mock_response = MagicMock()
         mock_response.items = []

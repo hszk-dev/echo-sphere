@@ -57,9 +57,7 @@ class TestGeneratePresignedUrl:
                 ExpiresIn=3600,
             )
 
-    async def test_raises_storage_error_on_client_error(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_raises_storage_error_on_client_error(self, adapter: S3StorageAdapter) -> None:
         """Should raise StorageError when client fails."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -79,9 +77,7 @@ class TestGeneratePresignedUrl:
 class TestObjectExists:
     """Tests for object_exists method."""
 
-    async def test_returns_true_when_object_exists(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_returns_true_when_object_exists(self, adapter: S3StorageAdapter) -> None:
         """Should return True when object exists."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -99,9 +95,7 @@ class TestObjectExists:
                 Key="existing/file.txt",
             )
 
-    async def test_returns_false_when_object_not_found(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_returns_false_when_object_not_found(self, adapter: S3StorageAdapter) -> None:
         """Should return False when object does not exist."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -118,9 +112,7 @@ class TestObjectExists:
 
             assert exists is False
 
-    async def test_raises_storage_error_on_other_errors(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_raises_storage_error_on_other_errors(self, adapter: S3StorageAdapter) -> None:
         """Should raise StorageError for non-404 errors."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -140,9 +132,7 @@ class TestObjectExists:
 class TestListObjects:
     """Tests for list_objects method."""
 
-    async def test_lists_objects_successfully(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_lists_objects_successfully(self, adapter: S3StorageAdapter) -> None:
         """Should list objects with the given prefix."""
         now = datetime.now(tz=UTC)
         mock_response = {
@@ -182,9 +172,7 @@ class TestListObjects:
             assert objects[1].key == "prefix/file2.txt"
             assert objects[1].size_bytes == 2048
 
-    async def test_returns_empty_list_when_no_objects(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_returns_empty_list_when_no_objects(self, adapter: S3StorageAdapter) -> None:
         """Should return empty list when no objects match prefix."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -202,9 +190,7 @@ class TestListObjects:
 class TestDeleteObject:
     """Tests for delete_object method."""
 
-    async def test_deletes_object_successfully(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_deletes_object_successfully(self, adapter: S3StorageAdapter) -> None:
         """Should delete object without error."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -222,9 +208,7 @@ class TestDeleteObject:
                 Key="file/to/delete.txt",
             )
 
-    async def test_raises_storage_error_on_failure(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_raises_storage_error_on_failure(self, adapter: S3StorageAdapter) -> None:
         """Should raise StorageError when deletion fails."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -244,9 +228,7 @@ class TestDeleteObject:
 class TestGetObjectInfo:
     """Tests for get_object_info method."""
 
-    async def test_gets_object_info_successfully(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_gets_object_info_successfully(self, adapter: S3StorageAdapter) -> None:
         """Should return ObjectInfo for existing object."""
         now = datetime.now(tz=UTC)
         mock_response = {
@@ -273,9 +255,7 @@ class TestGetObjectInfo:
             assert info.etag == "abc123"
             assert info.content_type == "application/octet-stream"
 
-    async def test_returns_none_when_object_not_found(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_returns_none_when_object_not_found(self, adapter: S3StorageAdapter) -> None:
         """Should return None when object does not exist."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -296,9 +276,7 @@ class TestGetObjectInfo:
 class TestEnsureBucketExists:
     """Tests for ensure_bucket_exists method."""
 
-    async def test_does_nothing_when_bucket_exists(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_does_nothing_when_bucket_exists(self, adapter: S3StorageAdapter) -> None:
         """Should not create bucket if it already exists."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()
@@ -310,9 +288,7 @@ class TestEnsureBucketExists:
             mock_client.head_bucket.assert_called_once_with(Bucket="existing-bucket")
             mock_client.create_bucket.assert_not_called()
 
-    async def test_creates_bucket_when_not_exists(
-        self, adapter: S3StorageAdapter
-    ) -> None:
+    async def test_creates_bucket_when_not_exists(self, adapter: S3StorageAdapter) -> None:
         """Should create bucket if it does not exist."""
         with patch.object(adapter, "_get_client") as mock_get_client:
             mock_client = AsyncMock()

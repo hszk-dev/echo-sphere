@@ -153,9 +153,7 @@ def _convert_egress_info(lk_info: LiveKitEgressInfo) -> EgressInfo:
     # Calculate file size from segment results
     file_size_bytes = None
     if lk_info.segment_results:
-        file_size_bytes = sum(
-            segment.size for segment in lk_info.segment_results if segment.size
-        )
+        file_size_bytes = sum(segment.size for segment in lk_info.segment_results if segment.size)
 
     # Get duration from the egress info (convert to int)
     duration_seconds = None

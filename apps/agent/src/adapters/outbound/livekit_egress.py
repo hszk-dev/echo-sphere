@@ -121,9 +121,7 @@ class LiveKitEgressAdapter(EgressPort):
                 room_name=config.room_name,
                 error=str(e),
             )
-            raise EgressError(
-                f"Failed to start egress for room {config.room_name}: {e}"
-            ) from e
+            raise EgressError(f"Failed to start egress for room {config.room_name}: {e}") from e
 
     async def stop_egress(self, egress_id: str) -> EgressInfo:
         """Stop an active egress recording.
@@ -258,9 +256,7 @@ def _convert_egress_info(lk_info: LiveKitEgressInfo, room_name: str) -> EgressIn
     # Calculate file size from segment results
     file_size_bytes = None
     if lk_info.segment_results:
-        file_size_bytes = sum(
-            segment.size for segment in lk_info.segment_results if segment.size
-        )
+        file_size_bytes = sum(segment.size for segment in lk_info.segment_results if segment.size)
 
     # Get duration from the egress info (convert to int)
     duration_seconds = None
