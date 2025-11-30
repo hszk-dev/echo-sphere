@@ -1,7 +1,7 @@
 """Unit tests for S3StorageAdapter."""
 
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -12,7 +12,6 @@ from botocore.exceptions import ClientError
 from src.adapters.outbound.s3_storage import S3StorageAdapter
 from src.application.ports.storage_port import StorageError
 from src.config.settings import Settings
-from src.domain.value_objects import ObjectInfo
 
 
 @pytest.fixture
@@ -145,7 +144,7 @@ class TestListObjects:
         self, adapter: S3StorageAdapter
     ) -> None:
         """Should list objects with the given prefix."""
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         mock_response = {
             "Contents": [
                 {
@@ -249,7 +248,7 @@ class TestGetObjectInfo:
         self, adapter: S3StorageAdapter
     ) -> None:
         """Should return ObjectInfo for existing object."""
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         mock_response = {
             "ContentLength": 4096,
             "LastModified": now,

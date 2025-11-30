@@ -393,3 +393,30 @@ class RecordingService:
             The recording if found, None otherwise.
         """
         return await self._recording_repo.get_by_session_id(session_id)
+
+    async def list_recordings(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status: RecordingStatus | None = None,
+    ) -> tuple[list[Recording], int]:
+        """List recordings with pagination and optional status filter.
+
+        Args:
+            page: Page number (1-indexed).
+            page_size: Number of items per page.
+            status: Optional status filter.
+
+        Returns:
+            Tuple of (recordings list, total count).
+        """
+        if status is None:
+            return await self._recording_repo.list_all(page=page, page_size=page_size)
+        else:
+            offset = (page - 1) * page_size
+            recordings = await self._recording_repo.list_by_status(
+                status=status,
+                limit=page_size,
+                offset=offset,
+            )
+            return recordings, len(recordings)

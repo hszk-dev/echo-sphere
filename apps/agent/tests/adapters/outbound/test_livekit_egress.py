@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from livekit.protocol.egress import EgressStatus as LKStatus
 
 from src.adapters.outbound.livekit_egress import LiveKitEgressAdapter
 from src.adapters.outbound.livekit_egress import _convert_status
@@ -207,42 +208,30 @@ class TestConvertStatus:
 
     def test_converts_starting_to_starting(self) -> None:
         """EGRESS_STARTING should map to STARTING."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_STARTING)
         assert result == EgressStatus.STARTING
 
     def test_converts_active_to_active(self) -> None:
         """EGRESS_ACTIVE should map to ACTIVE."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_ACTIVE)
         assert result == EgressStatus.ACTIVE
 
     def test_converts_ending_to_ending(self) -> None:
         """EGRESS_ENDING should map to ENDING."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_ENDING)
         assert result == EgressStatus.ENDING
 
     def test_converts_complete_to_complete(self) -> None:
         """EGRESS_COMPLETE should map to COMPLETE."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_COMPLETE)
         assert result == EgressStatus.COMPLETE
 
     def test_converts_failed_to_failed(self) -> None:
         """EGRESS_FAILED should map to FAILED."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_FAILED)
         assert result == EgressStatus.FAILED
 
     def test_converts_aborted_to_failed(self) -> None:
         """EGRESS_ABORTED should map to FAILED."""
-        from livekit.protocol.egress import EgressStatus as LKStatus
-
         result = _convert_status(LKStatus.EGRESS_ABORTED)
         assert result == EgressStatus.FAILED

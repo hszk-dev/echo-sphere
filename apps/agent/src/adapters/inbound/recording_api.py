@@ -127,16 +127,12 @@ def create_recording_router(
         )
 
         try:
-            # Get recordings from repository via service
-            recordings, total = await recording_service._recording_repo.list_all(
+            # Get recordings via service method
+            recordings, total = await recording_service.list_recordings(
                 page=page,
                 page_size=page_size,
+                status=status_filter,
             )
-
-            # Apply status filter if provided
-            if status_filter:
-                recordings = [r for r in recordings if r.status == status_filter]
-                total = len(recordings)
 
             # Calculate pagination info
             total_pages = (total + page_size - 1) // page_size if total > 0 else 1
