@@ -4,26 +4,21 @@ This adapter implements the EgressPort interface using the LiveKit API
 for recording room composite egress with HLS output to S3.
 """
 
-from datetime import UTC
-from datetime import datetime
-
 import structlog
 from livekit.api import LiveKitAPI
-from livekit.protocol.egress import EgressInfo as LiveKitEgressInfo
-from livekit.protocol.egress import EgressStatus as LiveKitEgressStatus
 from livekit.protocol.egress import ListEgressRequest
 from livekit.protocol.egress import RoomCompositeEgressRequest
 from livekit.protocol.egress import S3Upload
 from livekit.protocol.egress import SegmentedFileOutput
 from livekit.protocol.egress import StopEgressRequest
 
+from src.adapters.shared.livekit_converters import convert_egress_info
 from src.application.ports.egress_port import EgressError
 from src.application.ports.egress_port import EgressNotFoundError
 from src.application.ports.egress_port import EgressPort
 from src.config.settings import Settings
 from src.domain.value_objects import EgressConfig
 from src.domain.value_objects import EgressInfo
-from src.domain.value_objects import EgressStatus
 
 logger = structlog.get_logger()
 
@@ -105,7 +100,7 @@ class LiveKitEgressAdapter(EgressPort):
             )
 
             result = await api.egress.start_room_composite_egress(request)
-            egress_info = _convert_egress_info(result, config.room_name)
+            egress_info = convert_egress_info(result, config.room_name)
 
             logger.info(
                 "egress_started",
@@ -144,7 +139,7 @@ class LiveKitEgressAdapter(EgressPort):
             logger.info("stopping_egress", egress_id=egress_id)
 
             result = await api.egress.stop_egress(request)
-            egress_info = _convert_egress_info(result, result.room_name)
+            egress_info = convert_egress_info(result, result.room_name)
 
             logger.info(
                 "egress_stopped",
@@ -189,7 +184,7 @@ class LiveKitEgressAdapter(EgressPort):
                 return None
 
             result = response.items[0]
-            return _convert_egress_info(result, result.room_name)
+            return convert_egress_info(result, result.room_name)
 
         except Exception as e:
             logger.error(
@@ -222,79 +217,3 @@ def _build_s3_upload_config(settings: Settings) -> S3Upload:
         endpoint=settings.s3_endpoint_url,
         force_path_style=True,  # Required for MinIO
     )
-
-
-def _convert_egress_info(lk_info: LiveKitEgressInfo, room_name: str) -> EgressInfo:
-    """Convert LiveKit EgressInfo to domain EgressInfo.
-
-    Args:
-        lk_info: LiveKit protocol EgressInfo.
-        room_name: Room name for the egress.
-
-    Returns:
-        Domain EgressInfo value object.
-    """
-    status = _convert_status(lk_info.status)
-
-    # Convert timestamps from nanoseconds to datetime
-    started_at = None
-    if lk_info.started_at:
-        started_at = datetime.fromtimestamp(lk_info.started_at / 1e9, tz=UTC)
-
-    ended_at = None
-    if lk_info.ended_at:
-        ended_at = datetime.fromtimestamp(lk_info.ended_at / 1e9, tz=UTC)
-
-    # Extract playlist URL from segment outputs
-    file_path = None
-    if lk_info.segment_results:
-        for segment in lk_info.segment_results:
-            if segment.playlist_location:
-                file_path = segment.playlist_location
-                break
-
-    # Calculate file size from segment results
-    file_size_bytes = None
-    if lk_info.segment_results:
-        file_size_bytes = sum(segment.size for segment in lk_info.segment_results if segment.size)
-
-    # Get duration from the egress info (convert to int)
-    duration_seconds = None
-    if lk_info.segment_results:
-        for segment in lk_info.segment_results:
-            if segment.duration:
-                duration_seconds = int(segment.duration / 1e9)  # nanoseconds to seconds
-                break
-
-    return EgressInfo(
-        egress_id=lk_info.egress_id,
-        room_name=room_name or lk_info.room_name,
-        status=status,
-        started_at=started_at,
-        ended_at=ended_at,
-        error=lk_info.error if lk_info.error else None,
-        file_path=file_path,
-        duration_seconds=duration_seconds,
-        file_size_bytes=file_size_bytes,
-    )
-
-
-def _convert_status(lk_status: LiveKitEgressStatus) -> EgressStatus:
-    """Convert LiveKit EgressStatus to domain EgressStatus.
-
-    Args:
-        lk_status: LiveKit protocol EgressStatus.
-
-    Returns:
-        Domain EgressStatus enum value.
-    """
-    status_map = {
-        LiveKitEgressStatus.EGRESS_STARTING: EgressStatus.STARTING,
-        LiveKitEgressStatus.EGRESS_ACTIVE: EgressStatus.ACTIVE,
-        LiveKitEgressStatus.EGRESS_ENDING: EgressStatus.ENDING,
-        LiveKitEgressStatus.EGRESS_COMPLETE: EgressStatus.COMPLETE,
-        LiveKitEgressStatus.EGRESS_FAILED: EgressStatus.FAILED,
-        LiveKitEgressStatus.EGRESS_ABORTED: EgressStatus.FAILED,
-        LiveKitEgressStatus.EGRESS_LIMIT_REACHED: EgressStatus.FAILED,
-    }
-    return status_map.get(lk_status, EgressStatus.STARTING)

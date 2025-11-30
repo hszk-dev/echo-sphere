@@ -419,4 +419,5 @@ class RecordingService:
                 limit=page_size,
                 offset=offset,
             )
-            return recordings, len(recordings)
+            total = await self._recording_repo.count_by_status(status)
+            return recordings, total

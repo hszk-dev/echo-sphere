@@ -8,7 +8,7 @@ import pytest
 from livekit.protocol.egress import EgressStatus as LKStatus
 
 from src.adapters.outbound.livekit_egress import LiveKitEgressAdapter
-from src.adapters.outbound.livekit_egress import _convert_status
+from src.adapters.shared.livekit_converters import convert_egress_status
 from src.application.ports.egress_port import EgressError
 from src.application.ports.egress_port import EgressNotFoundError
 from src.config.settings import Settings
@@ -193,34 +193,34 @@ class TestClose:
 
 
 class TestConvertStatus:
-    """Tests for _convert_status helper function."""
+    """Tests for convert_egress_status helper function."""
 
     def test_converts_starting_to_starting(self) -> None:
         """EGRESS_STARTING should map to STARTING."""
-        result = _convert_status(LKStatus.EGRESS_STARTING)
+        result = convert_egress_status(LKStatus.EGRESS_STARTING)
         assert result == EgressStatus.STARTING
 
     def test_converts_active_to_active(self) -> None:
         """EGRESS_ACTIVE should map to ACTIVE."""
-        result = _convert_status(LKStatus.EGRESS_ACTIVE)
+        result = convert_egress_status(LKStatus.EGRESS_ACTIVE)
         assert result == EgressStatus.ACTIVE
 
     def test_converts_ending_to_ending(self) -> None:
         """EGRESS_ENDING should map to ENDING."""
-        result = _convert_status(LKStatus.EGRESS_ENDING)
+        result = convert_egress_status(LKStatus.EGRESS_ENDING)
         assert result == EgressStatus.ENDING
 
     def test_converts_complete_to_complete(self) -> None:
         """EGRESS_COMPLETE should map to COMPLETE."""
-        result = _convert_status(LKStatus.EGRESS_COMPLETE)
+        result = convert_egress_status(LKStatus.EGRESS_COMPLETE)
         assert result == EgressStatus.COMPLETE
 
     def test_converts_failed_to_failed(self) -> None:
         """EGRESS_FAILED should map to FAILED."""
-        result = _convert_status(LKStatus.EGRESS_FAILED)
+        result = convert_egress_status(LKStatus.EGRESS_FAILED)
         assert result == EgressStatus.FAILED
 
     def test_converts_aborted_to_failed(self) -> None:
         """EGRESS_ABORTED should map to FAILED."""
-        result = _convert_status(LKStatus.EGRESS_ABORTED)
+        result = convert_egress_status(LKStatus.EGRESS_ABORTED)
         assert result == EgressStatus.FAILED
