@@ -7,7 +7,6 @@ Run with: uv run agent.py [console|dev|start|download-files]
 from pathlib import Path
 
 from dotenv import load_dotenv
-
 from livekit import agents
 
 # Load environment variables from project root

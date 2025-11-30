@@ -70,22 +70,27 @@ class EchoSphereAssistant(Agent):
 
     Attributes:
         instructions: The system prompt for the agent.
+        greeting_prompt: The prompt for generating the initial greeting.
     """
 
-    def __init__(self, instructions: str | None = None) -> None:
+    def __init__(
+        self,
+        instructions: str | None = None,
+        greeting_prompt: str | None = None,
+    ) -> None:
         """Initialize the EchoSphere assistant.
 
         Args:
             instructions: Custom instructions for the agent.
-                Defaults to a helpful Japanese assistant prompt.
+                Defaults to settings value or a helpful Japanese assistant prompt.
+            greeting_prompt: Prompt for generating initial greeting.
+                Defaults to settings value.
         """
-        default_instructions = """You are a helpful voice AI assistant for EchoSphere.
-You assist users with their questions in a friendly and professional manner.
-Your responses are concise, clear, and natural for spoken conversation.
-You speak Japanese unless the user speaks in another language."""
+        settings = get_settings()
+        self._greeting_prompt = greeting_prompt or settings.agent_greeting_prompt
 
         super().__init__(
-            instructions=instructions or default_instructions,
+            instructions=instructions or settings.agent_instructions,
         )
 
     async def on_enter(self) -> None:
@@ -93,40 +98,33 @@ You speak Japanese unless the user speaks in another language."""
 
         Generates an initial greeting for the user.
         """
-        self.session.generate_reply(
-            instructions="Greet the user warmly in Japanese and offer your assistance."
-        )
+        self.session.generate_reply(instructions=self._greeting_prompt)
 
 
-def create_session(_settings: Settings | None = None) -> AgentSession[Any]:
+def create_session(settings: Settings | None = None) -> AgentSession[Any]:
     """Create an AgentSession with AWS AI services.
 
     Args:
-        settings: Application settings. If None, uses defaults.
+        settings: Application settings. If None, loads from environment.
 
     Returns:
         Configured AgentSession with STT, LLM, TTS, and VAD.
     """
-    # TODO: Use settings for configuration (Task 1.5)
-    # For now, use hardcoded values that will be moved to settings
-    aws_region = "ap-northeast-1"
-    stt_language = "ja-JP"
-    llm_model = "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
-    tts_voice = "Kazuha"
-    tts_language = "ja-JP"
+    if settings is None:
+        settings = get_settings()
 
     return AgentSession(
         # AWS AI Services for Japanese support
         stt=aws.STT(
-            language=stt_language,
+            language=settings.stt_language,
         ),
         llm=aws.LLM(
-            model=llm_model,
-            region=aws_region,
+            model=settings.llm_model,
+            region=settings.aws_region,
         ),
         tts=aws.TTS(
-            voice=tts_voice,
-            language=tts_language,
+            voice=settings.tts_voice,
+            language=settings.tts_language,
             speech_engine="neural",
         ),
         # Voice activity detection
