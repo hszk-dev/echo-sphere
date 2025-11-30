@@ -139,6 +139,377 @@
       opacity: 0.4;
     }
   }
+
+  /* ============================================
+     Elevated Professional Design System
+     ============================================ */
+
+  /* Noise texture overlay for depth */
+  .noise-texture {
+    position: relative;
+  }
+
+  .noise-texture::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Gradient mesh background */
+  .gradient-mesh {
+    background: radial-gradient(at 20% 30%, rgba(255, 107, 74, 0.15) 0, transparent 50%),
+      radial-gradient(at 80% 70%, rgba(49, 151, 149, 0.1) 0, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(255, 107, 74, 0.05) 0, transparent 70%);
+    background-size: 200% 200%;
+    animation: gradientShift 8s ease-in-out infinite;
+  }
+
+  /* Subtle radial gradient background */
+  .bg-radial-subtle {
+    background: radial-gradient(ellipse at 50% 0%, rgba(255, 107, 74, 0.08) 0%, transparent 50%);
+  }
+
+  /* Premium card with elevation */
+  .card-elevated {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .card-elevated:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 107, 74, 0.1);
+    border-color: rgba(255, 107, 74, 0.3);
+  }
+
+  /* Stagger animation delay utilities */
+  .stagger-1 {
+    animation-delay: 0ms;
+  }
+  .stagger-2 {
+    animation-delay: 50ms;
+  }
+  .stagger-3 {
+    animation-delay: 100ms;
+  }
+  .stagger-4 {
+    animation-delay: 150ms;
+  }
+  .stagger-5 {
+    animation-delay: 200ms;
+  }
+  .stagger-6 {
+    animation-delay: 250ms;
+  }
+  .stagger-7 {
+    animation-delay: 300ms;
+  }
+  .stagger-8 {
+    animation-delay: 350ms;
+  }
+  .stagger-9 {
+    animation-delay: 400ms;
+  }
+
+  /* Progress bar with glow */
+  .progress-glow {
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    box-shadow: 0 0 20px rgba(255, 107, 74, 0.5);
+    transition: all 0.3s ease;
+  }
+
+  .progress-glow:hover {
+    box-shadow: 0 0 30px rgba(255, 107, 74, 0.7);
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Gradient shift animation for mesh */
+  @keyframes gradientShift {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  /* Accent line decoration */
+  .accent-line {
+    position: relative;
+  }
+
+  .accent-line::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary) 0%, transparent 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .accent-line:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* Enhanced status badge styles */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .status-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Highlight animation for transcript */
+  .highlight-active {
+    animation: highlightPulse 0.5s ease-out;
+  }
+
+  @keyframes highlightPulse {
+    0% {
+      background-color: rgba(255, 107, 74, 0.3);
+    }
+    100% {
+      background-color: transparent;
+    }
+  }
+
+  /* Smooth scroll indicator */
+  .scroll-indicator {
+    position: relative;
+  }
+
+  .scroll-indicator::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--primary);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .scroll-indicator.active::after {
+    opacity: 1;
+  }
+
+  /* ============================================
+     Phase 5: Final Polish
+     ============================================ */
+
+  /* Page content entrance animation */
+  .page-enter {
+    animation: pageEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes pageEnter {
+    0% {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Enhanced empty state container */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    text-align: center;
+  }
+
+  .empty-state-icon {
+    width: 5rem;
+    height: 5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(255, 107, 74, 0.1) 0%, rgba(49, 151, 149, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: floatIcon 4s ease-in-out infinite;
+  }
+
+  @keyframes floatIcon {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-8px);
+    }
+  }
+
+  .empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state-description {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+    max-width: 20rem;
+    line-height: 1.6;
+  }
+
+  /* Keyboard shortcut hints */
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    font-family: var(--font-mono), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    transition: all 0.15s ease;
+  }
+
+  .kbd-active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(1px);
+    box-shadow: none;
+  }
+
+  /* Keyboard hints container */
+  .keyboard-hints {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(26, 26, 26, 0.6);
+    backdrop-filter: blur(8px);
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .keyboard-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* Fade scale animation for modals/dialogs */
+  .fade-scale-in {
+    animation: fadeScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes fadeScaleIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Scale in animation for buttons/icons */
+  .animate-scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  @keyframes scaleIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Shadow glow variants */
+  .shadow-glow {
+    box-shadow: 0 4px 20px rgba(255, 107, 74, 0.25);
+  }
+
+  .shadow-glow-lg {
+    box-shadow: 0 8px 40px rgba(255, 107, 74, 0.3);
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--surface) 0%,
+      rgba(255, 255, 255, 0.05) 50%,
+      var(--surface) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton 1.5s ease-in-out infinite;
+    border-radius: 0.375rem;
+  }
+
+  @keyframes skeleton {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
 }
 
 @layer utilities {
