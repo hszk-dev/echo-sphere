@@ -234,6 +234,32 @@ class TestStopRecording:
         assert result.status == RecordingStatus.COMPLETED
         mock_egress_port.stop_egress.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_stop_recording_starting_state_fails_recording(
+        self,
+        recording_service: RecordingService,
+        mock_recording_repo: AsyncMock,
+        mock_egress_port: AsyncMock,
+    ) -> None:
+        """Stopping recording in STARTING state should fail the recording."""
+        session_id = uuid4()
+        recording = Recording(
+            session_id=session_id,
+            egress_id="egress-123",
+            storage_bucket="test-bucket",
+            storage_path="recordings/test",
+        )
+        # Recording is in STARTING state (default)
+        assert recording.status == RecordingStatus.STARTING
+        mock_recording_repo.get_by_session_id.return_value = recording
+
+        result = await recording_service.stop_recording(session_id)
+
+        assert result.status == RecordingStatus.FAILED
+        assert result.error_message == "Recording stopped before egress started"
+        mock_egress_port.stop_egress.assert_not_called()
+        mock_recording_repo.save.assert_called_once()
+
 
 class TestHandleEgressEvent:
     """Tests for handle_egress_event method."""
@@ -281,9 +307,7 @@ class TestHandleEgressEvent:
         )
         recording.activate()
         mock_recording_repo.get_by_egress_id.return_value = recording
-        mock_storage_port.generate_presigned_url.return_value = (
-            "https://example.com/playlist.m3u8"
-        )
+        mock_storage_port.generate_presigned_url.return_value = "https://example.com/playlist.m3u8"
         mock_storage_port.get_object_info.return_value = StorageObject(
             bucket="test-bucket",
             key="recordings/test/index.m3u8",

@@ -3,6 +3,7 @@
 from uuid import UUID
 
 import structlog
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,6 +49,7 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
                 file_size_bytes=recording.file_size_bytes,
                 error_message=recording.error_message,
                 created_at=recording.created_at,
+                updated_at=recording.updated_at,
                 started_at=recording.started_at,
                 ended_at=recording.ended_at,
             )
@@ -58,6 +60,7 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
             model.duration_seconds = recording.duration_seconds
             model.file_size_bytes = recording.file_size_bytes
             model.error_message = recording.error_message
+            model.updated_at = recording.updated_at
             model.started_at = recording.started_at
             model.ended_at = recording.ended_at
 
@@ -146,6 +149,37 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
         models = result.scalars().all()
         return [self._model_to_entity(m) for m in models]
 
+    async def list_all(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Recording], int]:
+        """List all recordings with pagination.
+
+        Args:
+            page: Page number (1-indexed).
+            page_size: Number of items per page.
+
+        Returns:
+            Tuple of (recordings list, total count).
+        """
+        # Count query
+        count_stmt = select(func.count()).select_from(RecordingModel)
+        count_result = await self._session.execute(count_stmt)
+        total = count_result.scalar_one()
+
+        # Data query with pagination
+        offset = (page - 1) * page_size
+        stmt = (
+            select(RecordingModel)
+            .order_by(RecordingModel.created_at.desc())
+            .limit(page_size)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        models = result.scalars().all()
+        return [self._model_to_entity(m) for m in models], total
+
     def _model_to_entity(self, model: RecordingModel) -> Recording:
         """Convert SQLAlchemy model to domain entity.
 
@@ -167,6 +201,7 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
             file_size_bytes=model.file_size_bytes,
             error_message=model.error_message,
             created_at=model.created_at,
+            updated_at=model.updated_at,
             started_at=model.started_at,
             ended_at=model.ended_at,
         )

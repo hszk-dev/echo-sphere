@@ -187,6 +187,16 @@ class RecordingService:
         )
 
         try:
+            # Handle STARTING state - egress never started, fail the recording
+            if recording.status == RecordingStatus.STARTING:
+                recording.fail("Recording stopped before egress started")
+                await self._recording_repo.save(recording)
+                logger.info(
+                    "recording_failed_before_start",
+                    recording_id=str(recording.id),
+                )
+                return recording
+
             # Stop egress
             await self._egress.stop_egress(recording.egress_id)
 

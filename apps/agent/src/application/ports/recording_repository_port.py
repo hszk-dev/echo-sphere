@@ -91,3 +91,23 @@ class RecordingRepositoryPort(ABC):
             RepositoryError: If the retrieval fails.
         """
         ...
+
+    @abstractmethod
+    async def list_all(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Recording], int]:
+        """List all recordings with pagination.
+
+        Args:
+            page: Page number (1-indexed).
+            page_size: Number of items per page.
+
+        Returns:
+            Tuple of (recordings list, total count).
+
+        Raises:
+            RepositoryError: If the retrieval fails.
+        """
+        ...

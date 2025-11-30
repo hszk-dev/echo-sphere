@@ -57,6 +57,7 @@ class Recording:
         file_size_bytes: Total file size in bytes.
         error_message: Error message if recording failed.
         created_at: Recording creation timestamp.
+        updated_at: Last update timestamp.
         started_at: Recording start timestamp.
         ended_at: Recording end timestamp.
     """
@@ -72,6 +73,7 @@ class Recording:
     file_size_bytes: int | None = None
     error_message: str | None = None
     created_at: datetime = field(default_factory=_utc_now)
+    updated_at: datetime = field(default_factory=_utc_now)
     started_at: datetime | None = None
     ended_at: datetime | None = None
 
@@ -99,6 +101,7 @@ class Recording:
             msg = f"Cannot transition from {self.status} to {new_status}"
             raise ValueError(msg)
         self.status = new_status
+        self.updated_at = _utc_now()
 
     def activate(self) -> None:
         """Mark recording as active (egress started).
@@ -155,6 +158,7 @@ class Recording:
             raise ValueError(msg)
         self.status = RecordingStatus.FAILED
         self.error_message = error_message
+        self.updated_at = _utc_now()
         self.ended_at = _utc_now()
 
     @property
