@@ -163,6 +163,7 @@ class TestGetEgressInfo:
 
             result = await adapter.get_egress_info("egress-123")
 
+            assert result is not None
             assert result.egress_id == "egress-123"
             assert result.status == EgressStatus.ACTIVE
 

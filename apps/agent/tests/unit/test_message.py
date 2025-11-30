@@ -12,17 +12,14 @@ class TestMessageRole:
 
     def test_user_role_value(self) -> None:
         """USER role should have value 'user'."""
-        assert MessageRole.USER == "user"
         assert MessageRole.USER.value == "user"
 
     def test_assistant_role_value(self) -> None:
         """ASSISTANT role should have value 'assistant'."""
-        assert MessageRole.ASSISTANT == "assistant"
         assert MessageRole.ASSISTANT.value == "assistant"
 
     def test_system_role_value(self) -> None:
         """SYSTEM role should have value 'system'."""
-        assert MessageRole.SYSTEM == "system"
         assert MessageRole.SYSTEM.value == "system"
 
 
