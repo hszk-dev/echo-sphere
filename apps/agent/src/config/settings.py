@@ -35,6 +35,16 @@ class Settings(BaseSettings):
         database_user: PostgreSQL user.
         database_password: PostgreSQL password.
         database_name: PostgreSQL database name.
+        s3_endpoint: S3/MinIO endpoint URL.
+        s3_access_key: S3/MinIO access key.
+        s3_secret_key: S3/MinIO secret key.
+        s3_bucket_recordings: S3 bucket for recordings.
+        s3_region: S3 region.
+        egress_output_width: Egress video output width.
+        egress_output_height: Egress video output height.
+        egress_segment_duration: HLS segment duration in seconds.
+        recording_enabled_by_default: Whether recording is enabled by default.
+        presigned_url_expiry_seconds: Presigned URL expiry time in seconds.
     """
 
     model_config = SettingsConfigDict(
@@ -99,6 +109,22 @@ class Settings(BaseSettings):
     database_user: str = Field(default="echosphere")
     database_password: SecretStr = Field(default_factory=lambda: SecretStr("echosphere_dev"))
     database_name: str = Field(default="echosphere")
+
+    # S3/MinIO Configuration
+    s3_endpoint: str = Field(default="http://localhost:9000")
+    s3_access_key: str = Field(default="minioadmin")
+    s3_secret_key: SecretStr = Field(default_factory=lambda: SecretStr("minioadmin"))
+    s3_bucket_recordings: str = Field(default="echosphere-recordings")
+    s3_region: str = Field(default="us-east-1")
+
+    # Egress Configuration
+    egress_output_width: int = Field(default=1280)
+    egress_output_height: int = Field(default=720)
+    egress_segment_duration: int = Field(default=4)
+
+    # Recording Configuration
+    recording_enabled_by_default: bool = Field(default=True)
+    presigned_url_expiry_seconds: int = Field(default=3600)
 
     # Logging
     log_level: str = Field(default="INFO")
