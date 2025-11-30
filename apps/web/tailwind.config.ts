@@ -80,6 +80,13 @@ const config: Config = {
         "scale-in": "scaleIn 0.2s ease-out",
         "spin-slow": "spin 3s linear infinite",
         ripple: "ripple 1.5s ease-out infinite",
+        // Elevated Professional animations
+        "stagger-fade-in": "staggerFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "card-hover": "cardHover 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "glow-pulse": "glowPulse 2s ease-in-out infinite",
+        shimmer: "shimmer 2s linear infinite",
+        float: "float 6s ease-in-out infinite",
+        "gradient-shift": "gradientShift 8s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
@@ -106,6 +113,41 @@ const config: Config = {
           "0%": { transform: "scale(1)", opacity: "0.4" },
           "100%": { transform: "scale(2.5)", opacity: "0" },
         },
+        // Elevated Professional keyframes
+        staggerFadeIn: {
+          "0%": { opacity: "0", transform: "translateY(20px) scale(0.97)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        cardHover: {
+          "0%": { transform: "translateY(0) scale(1)" },
+          "100%": { transform: "translateY(-4px) scale(1.02)" },
+        },
+        glowPulse: {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(255, 107, 74, 0.2)" },
+          "50%": { boxShadow: "0 0 40px rgba(255, 107, 74, 0.4)" },
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        gradientShift: {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+      },
+      // Custom easing functions as transition timing
+      transitionTimingFunction: {
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "out-back": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "in-out-expo": "cubic-bezier(0.87, 0, 0.13, 1)",
+      },
+      transitionDuration: {
+        "400": "400ms",
+        "600": "600ms",
       },
       borderRadius: {
         "4xl": "2rem",
