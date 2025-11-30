@@ -5,6 +5,23 @@ services:
   # ============================================
   # LiveKit Server (Local Development)
   # ============================================
+  # ⚠️  WARNING: On macOS, use native installation instead of Docker!
+  #
+  # According to official LiveKit docs (https://docs.livekit.io/home/self-hosting/deployment/):
+  #   "WebRTC servers can be tricky to deploy because of their use of UDP ports
+  #    and having to know their own public IP address."
+  #   "If running in a Dockerized environment, host networking should be used."
+  #
+  # macOS requires Docker Desktop 4.34+ with explicit host networking enablement,
+  # and known issues remain (https://github.com/docker/for-mac/issues/7448).
+  # This causes WebRTC peer connections to fail with "could not establish pc connection".
+  #
+  # Recommended: Install and run LiveKit natively:
+  #   brew install livekit
+  #   livekit-server --dev
+  #
+  # This Docker service is kept for Linux environments or reference only.
+  # ============================================
   livekit:
     image: livekit/livekit-server:latest
     command: --dev --bind 0.0.0.0

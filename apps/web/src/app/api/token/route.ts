@@ -1,24 +1,13 @@
+import type { TokenErrorResponse, TokenRequest, TokenResponse } from "@/shared/types";
 import { AccessToken } from "livekit-server-sdk";
 import { type NextRequest, NextResponse } from "next/server";
 
-interface TokenRequest {
-  roomName: string;
-  participantName: string;
-}
-
-interface TokenResponse {
-  token: string;
-}
-
-interface ErrorResponse {
-  error: string;
-}
-
 const TOKEN_TTL_SECONDS = 10 * 60; // 10 minutes
+const MAX_NAME_LENGTH = 128;
 
 export async function POST(
   request: NextRequest
-): Promise<NextResponse<TokenResponse | ErrorResponse>> {
+): Promise<NextResponse<TokenResponse | TokenErrorResponse>> {
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
 
@@ -40,6 +29,13 @@ export async function POST(
 
   if (!roomName || !participantName) {
     return NextResponse.json({ error: "Missing roomName or participantName" }, { status: 400 });
+  }
+
+  if (roomName.length > MAX_NAME_LENGTH || participantName.length > MAX_NAME_LENGTH) {
+    return NextResponse.json(
+      { error: `Name must be ${MAX_NAME_LENGTH} characters or less` },
+      { status: 400 }
+    );
   }
 
   const accessToken = new AccessToken(apiKey, apiSecret, {

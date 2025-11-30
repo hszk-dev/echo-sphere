@@ -48,6 +48,33 @@ task setup
 task dev
 ```
 
+### LiveKit Local Development
+
+For local development, **native LiveKit server installation is recommended** over Docker.
+
+> **Why not Docker?**
+> According to the [official LiveKit documentation](https://docs.livekit.io/home/self-hosting/deployment/):
+>
+> *"WebRTC servers can be tricky to deploy because of their use of UDP ports and having to know their own public IP address."*
+>
+> *"If running in a Dockerized environment, host networking should be used for optimal performance."*
+>
+> On macOS, Docker's `--network host` mode requires Docker Desktop 4.34+ with explicit enablement, and [known issues remain](https://github.com/docker/for-mac/issues/7448). This causes WebRTC peer connections to fail.
+
+**Install and run LiveKit natively:**
+
+```bash
+# macOS
+brew install livekit
+
+# Start in development mode
+livekit-server --dev
+# API Key: devkey
+# API Secret: secret
+```
+
+The Docker Compose configuration includes LiveKit for reference, but use the native installation for reliable WebRTC connections on macOS.
+
 ### Commands
 
 ```bash
