@@ -35,7 +35,7 @@ export function TranscriptPanel() {
         id: `user-${stream.streamInfo.id}`,
         text: stream.text,
         isUser: true,
-        timestamp: Date.now(), // Use current time as fallback since TextStreamData doesn't have timestamp
+        timestamp: stream.streamInfo.timestamp,
       });
     }
 

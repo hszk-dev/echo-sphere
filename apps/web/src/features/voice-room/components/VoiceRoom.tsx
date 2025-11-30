@@ -81,7 +81,9 @@ export function VoiceRoom({ roomName, participantName, onDisconnect }: VoiceRoom
   const [shouldConnect, setShouldConnect] = useState(false);
 
   useEffect(() => {
-    fetchToken({ roomName, participantName });
+    const controller = new AbortController();
+    fetchToken({ roomName, participantName }, controller.signal);
+    return () => controller.abort();
   }, [roomName, participantName, fetchToken]);
 
   useEffect(() => {

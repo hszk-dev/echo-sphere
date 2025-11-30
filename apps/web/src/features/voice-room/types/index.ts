@@ -1,15 +1,5 @@
-export interface TokenRequest {
-  roomName: string;
-  participantName: string;
-}
-
-export interface TokenResponse {
-  token: string;
-}
-
-export interface TokenErrorResponse {
-  error: string;
-}
+// Re-export shared token types
+export type { TokenRequest, TokenResponse, TokenErrorResponse } from "@/shared/types";
 
 export interface VoiceRoomProps {
   roomName: string;
