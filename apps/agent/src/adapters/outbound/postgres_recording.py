@@ -180,6 +180,23 @@ class PostgresRecordingRepository(RecordingRepositoryPort):
         models = result.scalars().all()
         return [self._model_to_entity(m) for m in models], total
 
+    async def count_by_status(self, status: RecordingStatus) -> int:
+        """Count recordings by status.
+
+        Args:
+            status: The recording status to filter by.
+
+        Returns:
+            Count of recordings with the specified status.
+        """
+        stmt = (
+            select(func.count())
+            .select_from(RecordingModel)
+            .where(RecordingModel.status == status.value)
+        )
+        result = await self._session.execute(stmt)
+        return result.scalar_one()
+
     def _model_to_entity(self, model: RecordingModel) -> Recording:
         """Convert SQLAlchemy model to domain entity.
 

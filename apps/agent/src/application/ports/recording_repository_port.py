@@ -112,3 +112,18 @@ class RecordingRepositoryPort(ABC):
             RepositoryError: If the retrieval fails.
         """
         ...
+
+    @abstractmethod
+    async def count_by_status(self, status: RecordingStatus) -> int:
+        """Count recordings by status.
+
+        Args:
+            status: The recording status to filter by.
+
+        Returns:
+            Count of recordings with the specified status.
+
+        Raises:
+            RepositoryError: If the count operation fails.
+        """
+        ...
