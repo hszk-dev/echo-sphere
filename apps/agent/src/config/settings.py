@@ -7,6 +7,7 @@ from functools import lru_cache
 
 from pydantic import Field
 from pydantic import SecretStr
+from pydantic import computed_field
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -22,12 +23,18 @@ class Settings(BaseSettings):
         livekit_api_secret: LiveKit API secret.
         openai_api_key: OpenAI API key.
         log_level: Logging level.
+        database_host: PostgreSQL host.
+        database_port: PostgreSQL port.
+        database_user: PostgreSQL user.
+        database_password: PostgreSQL password.
+        database_name: PostgreSQL database name.
     """
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # Application
@@ -42,8 +49,29 @@ class Settings(BaseSettings):
     # OpenAI
     openai_api_key: SecretStr = Field(default_factory=lambda: SecretStr(""))
 
+    # Database
+    database_host: str = Field(default="localhost")
+    database_port: int = Field(default=5432)
+    database_user: str = Field(default="echosphere")
+    database_password: SecretStr = Field(default_factory=lambda: SecretStr("echosphere_dev"))
+    database_name: str = Field(default="echosphere")
+
     # Logging
     log_level: str = Field(default="INFO")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def database_url(self) -> str:
+        """Build async PostgreSQL connection URL.
+
+        Returns:
+            Async PostgreSQL connection URL for SQLAlchemy.
+        """
+        password = self.database_password.get_secret_value()
+        return (
+            f"postgresql+asyncpg://{self.database_user}:{password}"
+            f"@{self.database_host}:{self.database_port}/{self.database_name}"
+        )
 
 
 @lru_cache

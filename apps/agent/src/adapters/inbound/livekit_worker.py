@@ -4,17 +4,25 @@ This module implements the LiveKit Agents integration, serving as the
 inbound adapter in the hexagonal architecture. It handles:
 - Agent session lifecycle
 - Real-time voice interaction
-- AI pipeline orchestration (STT → LLM → TTS)
+- AI pipeline orchestration (STT -> LLM -> TTS)
+- Session and message persistence
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+from dataclasses import dataclass
+from dataclasses import field
+from functools import lru_cache
 from typing import TYPE_CHECKING
+from typing import Any
 
 from livekit.agents import Agent
 from livekit.agents import AgentServer
 from livekit.agents import AgentSession
+from livekit.agents import CloseEvent
+from livekit.agents import ConversationItemAddedEvent
 from livekit.agents import JobContext
 from livekit.agents.voice import room_io
 from livekit.plugins import aws
@@ -22,10 +30,38 @@ from livekit.plugins import noise_cancellation
 from livekit.plugins import silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from src.adapters.outbound import Database
+from src.adapters.outbound import PostgresSessionRepository
+from src.config.settings import get_settings
+from src.domain.entities import Message
+from src.domain.entities import MessageRole
+from src.domain.entities import Session
+
 if TYPE_CHECKING:
     from src.config.settings import Settings
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SessionContext:
+    """Container for session-related state during entrypoint execution."""
+
+    db: Database | None
+    is_console_mode: bool
+    background_tasks: set[asyncio.Task[None]] = field(default_factory=set)
+    domain_session: Session | None = None
+
+
+@lru_cache
+def get_database() -> Database:
+    """Get or create the database instance.
+
+    Returns:
+        Database instance.
+    """
+    settings = get_settings()
+    return Database(settings.database_url)
 
 
 class EchoSphereAssistant(Agent):
@@ -64,7 +100,7 @@ You speak Japanese unless the user speaks in another language."""
         )
 
 
-def create_session(_settings: Settings | None = None) -> AgentSession:  # type: ignore[type-arg]
+def create_session(_settings: Settings | None = None) -> AgentSession[Any]:
     """Create an AgentSession with AWS AI services.
 
     Args:
@@ -104,6 +140,171 @@ def create_session(_settings: Settings | None = None) -> AgentSession:  # type: 
     )
 
 
+async def _resolve_room_sid(ctx: JobContext) -> str:
+    """Resolve the room SID from job context.
+
+    Handles both real LiveKit rooms and console mode mock rooms.
+
+    Args:
+        ctx: The job context containing room information.
+
+    Returns:
+        Room SID string, or a fallback for console mode.
+    """
+    try:
+        sid_coro = ctx.room.sid
+        if hasattr(sid_coro, "__await__"):
+            return await sid_coro
+        # Console mode: use room name as fallback
+        return f"console-{ctx.room.name}"
+    except (TypeError, AttributeError):
+        # Fallback for mock objects
+        return f"console-{ctx.room.name}"
+
+
+async def _save_session_safe(
+    session_ctx: SessionContext,
+    operation: str,
+) -> None:
+    """Save session to database with error handling.
+
+    Args:
+        session_ctx: The session context containing db and domain_session.
+        operation: Description of the operation for logging.
+    """
+    if session_ctx.db is None or session_ctx.domain_session is None:
+        return
+
+    try:
+        async with session_ctx.db.get_session() as db_session:
+            repo = PostgresSessionRepository(db_session)
+            await repo.save_session(session_ctx.domain_session)
+        logger.debug(
+            "Session saved",
+            extra={
+                "operation": operation,
+                "session_id": str(session_ctx.domain_session.id),
+                "status": session_ctx.domain_session.status.value,
+            },
+        )
+    except Exception as e:
+        logger.warning(
+            "Failed to save session",
+            extra={
+                "operation": operation,
+                "error": str(e),
+                "session_id": str(session_ctx.domain_session.id),
+            },
+        )
+
+
+def _setup_conversation_handler(
+    agent_session: AgentSession[Any],
+    session_ctx: SessionContext,
+) -> None:
+    """Set up the conversation item event handler.
+
+    Args:
+        agent_session: The LiveKit agent session.
+        session_ctx: The session context for accessing state.
+    """
+
+    @agent_session.on("conversation_item_added")
+    def on_conversation_item(ev: ConversationItemAddedEvent) -> None:
+        """Handle conversation item added events."""
+        if session_ctx.domain_session is None:
+            return
+
+        item = ev.item
+        if item.type != "message":
+            return
+
+        # Determine role
+        if item.role == "user":
+            role = MessageRole.USER
+        elif item.role == "assistant":
+            role = MessageRole.ASSISTANT
+        else:
+            return
+
+        # Get text content
+        content = item.text_content
+        if not content:
+            return
+
+        # Save message asynchronously
+        async def save_message() -> None:
+            if session_ctx.db is None or session_ctx.domain_session is None:
+                return
+            try:
+                message = Message(
+                    session_id=session_ctx.domain_session.id,
+                    role=role,
+                    content=content,
+                )
+                async with session_ctx.db.get_session() as db_session:
+                    repo = PostgresSessionRepository(db_session)
+                    await repo.save_message(message)
+                logger.debug(
+                    "Message saved",
+                    extra={"role": role.value, "content": content[:50] if content else ""},
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to save message",
+                    extra={"error": str(e), "role": role.value},
+                )
+
+        task = asyncio.create_task(save_message())
+        session_ctx.background_tasks.add(task)
+        task.add_done_callback(session_ctx.background_tasks.discard)
+
+
+def _setup_close_handler(
+    agent_session: AgentSession[Any],
+    session_ctx: SessionContext,
+    close_event: asyncio.Event,
+) -> None:
+    """Set up the session close event handler.
+
+    Args:
+        agent_session: The LiveKit agent session.
+        session_ctx: The session context for accessing state.
+        close_event: Event to signal when session closes.
+    """
+
+    @agent_session.on("close")
+    def on_close(ev: CloseEvent) -> None:
+        """Handle session close events."""
+        session_id = str(session_ctx.domain_session.id) if session_ctx.domain_session else "unknown"
+        logger.info(
+            "Agent session closing",
+            extra={
+                "reason": ev.reason.value if ev.reason else "unknown",
+                "session_id": session_id,
+            },
+        )
+        close_event.set()
+
+
+async def _wait_for_background_tasks(session_ctx: SessionContext) -> None:
+    """Wait for pending background tasks to complete.
+
+    Args:
+        session_ctx: The session context containing background tasks.
+    """
+    if not session_ctx.background_tasks:
+        return
+
+    pending = [t for t in session_ctx.background_tasks if not t.done()]
+    if pending:
+        logger.debug(
+            "Waiting for pending background tasks",
+            extra={"count": len(pending)},
+        )
+        await asyncio.gather(*pending, return_exceptions=True)
+
+
 # Create server instance at module level for pickle compatibility
 server = AgentServer()
 
@@ -119,17 +320,31 @@ async def entrypoint(ctx: JobContext) -> None:
     Args:
         ctx: The job context containing room information.
     """
-    logger.info(
-        "Starting agent session",
-        extra={
-            "room_name": ctx.room.name,
-            "room_sid": ctx.room.sid,
-        },
+    # Initialize session context
+    is_console_mode = ctx.room.name == "mock_room"
+    session_ctx = SessionContext(
+        db=None if is_console_mode else get_database(),
+        is_console_mode=is_console_mode,
     )
 
-    session = create_session()
+    logger.info(
+        "Entrypoint called",
+        extra={"room_name": ctx.room.name, "console_mode": is_console_mode},
+    )
 
-    await session.start(
+    if is_console_mode:
+        logger.info("Console mode: database operations disabled")
+
+    # Create agent session and close event
+    agent_session = create_session()
+    close_event = asyncio.Event()
+
+    # Set up event handlers
+    _setup_conversation_handler(agent_session, session_ctx)
+    _setup_close_handler(agent_session, session_ctx, close_event)
+
+    # Start agent session
+    await agent_session.start(
         room=ctx.room,
         agent=EchoSphereAssistant(),
         room_options=room_io.RoomOptions(
@@ -141,9 +356,41 @@ async def entrypoint(ctx: JobContext) -> None:
         ),
     )
 
+    # Resolve room SID and create domain session
+    room_sid = await _resolve_room_sid(ctx)
     logger.info(
         "Agent session started",
+        extra={"room_name": ctx.room.name, "room_sid": room_sid},
+    )
+
+    # Create and initialize domain session
+    session_ctx.domain_session = Session(
+        room_name=ctx.room.name,
+        user_id=room_sid,
+    )
+
+    # Save initial session (pending status)
+    await _save_session_safe(session_ctx, "create")
+
+    # Start the session (transition to active)
+    session_ctx.domain_session.start()
+    await _save_session_safe(session_ctx, "start")
+
+    # Wait for the session to close
+    await close_event.wait()
+
+    # Wait for pending background tasks before cleanup
+    await _wait_for_background_tasks(session_ctx)
+
+    # Mark session as complete and save
+    session_ctx.domain_session.complete()
+    await _save_session_safe(session_ctx, "complete")
+
+    logger.info(
+        "Agent session completed",
         extra={
             "room_name": ctx.room.name,
+            "session_id": str(session_ctx.domain_session.id),
+            "duration_seconds": session_ctx.domain_session.duration_seconds,
         },
     )
