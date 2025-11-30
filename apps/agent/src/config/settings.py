@@ -62,7 +62,7 @@ class Settings(BaseSettings):
         description="Language code for Amazon Transcribe STT",
     )
     llm_model: str = Field(
-        default="apac.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        default="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
         description="Model ID for Amazon Bedrock LLM",
     )
     tts_voice: str = Field(

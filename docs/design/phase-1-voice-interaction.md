@@ -266,7 +266,7 @@ async def voice_agent(ctx: agents.JobContext) -> None:
             speech_region=settings.aws_region,
         ),
         llm=aws.LLM(
-            model=settings.llm_model,  # "apac.anthropic.claude-sonnet-4-5-20250929-v1:0"
+            model=settings.llm_model,  # "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
             region=settings.aws_region,
             temperature=0.7,
         ),
@@ -741,7 +741,7 @@ class Settings(BaseSettings):
 
     # AI Model Configuration (AWS)
     stt_language: str = Field(default="ja-JP")  # Japanese by default
-    llm_model: str = Field(default="apac.anthropic.claude-sonnet-4-5-20250929-v1:0")
+    llm_model: str = Field(default="jp.anthropic.claude-sonnet-4-5-20250929-v1:0")
     tts_voice: str = Field(default="Kazuha")  # Japanese neural voice
     tts_language: str = Field(default="ja-JP")
 
