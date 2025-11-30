@@ -35,9 +35,9 @@ class Settings(BaseSettings):
         database_user: PostgreSQL user.
         database_password: PostgreSQL password.
         database_name: PostgreSQL database name.
-        s3_endpoint: S3/MinIO endpoint URL.
-        s3_access_key: S3/MinIO access key.
-        s3_secret_key: S3/MinIO secret key.
+        s3_endpoint_url: S3/MinIO endpoint URL (None for AWS S3).
+        s3_access_key: S3 access key.
+        s3_secret_key: S3 secret key.
         s3_bucket_recordings: S3 bucket for recordings.
         s3_region: S3 region.
         egress_output_width: Egress video output width.
@@ -45,6 +45,8 @@ class Settings(BaseSettings):
         egress_segment_duration: HLS segment duration in seconds.
         recording_enabled_by_default: Whether recording is enabled by default.
         presigned_url_expiry_seconds: Presigned URL expiry time in seconds.
+        http_host: HTTP server host.
+        http_port: HTTP server port.
     """
 
     model_config = SettingsConfigDict(
@@ -110,8 +112,11 @@ class Settings(BaseSettings):
     database_password: SecretStr = Field(default_factory=lambda: SecretStr("echosphere_dev"))
     database_name: str = Field(default="echosphere")
 
-    # S3/MinIO Configuration
-    s3_endpoint: str = Field(default="http://localhost:9000")
+    # S3/MinIO Storage
+    s3_endpoint_url: str | None = Field(
+        default="http://localhost:9000",
+        description="S3/MinIO endpoint URL. Set to None for AWS S3.",
+    )
     s3_access_key: str = Field(default="minioadmin")
     s3_secret_key: SecretStr = Field(default_factory=lambda: SecretStr("minioadmin"))
     s3_bucket_recordings: str = Field(default="echosphere-recordings")
@@ -125,6 +130,10 @@ class Settings(BaseSettings):
     # Recording Configuration
     recording_enabled_by_default: bool = Field(default=True)
     presigned_url_expiry_seconds: int = Field(default=3600)
+
+    # HTTP Server
+    http_host: str = Field(default="0.0.0.0")
+    http_port: int = Field(default=8080)
 
     # Logging
     log_level: str = Field(default="INFO")
